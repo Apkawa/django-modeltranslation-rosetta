@@ -1,0 +1,97 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+{% load admin_static %}
+{% load modeltranslation_rosetta %}
+
+{% block content %}
+    <form action="?{{ request.GET.q }}" method="get">
+        <div>
+            {{ filter_form }}
+            <input type="submit" value="Filter" class="default">
+        </div>
+    </form>
+    <form action="" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.media }}
+        {{ form.management_form }}
+        {% if form.errors %}
+            {{ form.errors }}
+        {% endif %}
+        <h1>{{ model_info.meta.verbose_name }}</h1>
+        <div class="submit-row">
+            <input type="submit" value="Сохранить" class="default" name="_save">
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>ru</th>
+                <th></th>
+                <th>en</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for sub_form in form %}
+                {% for h_field in sub_form.hidden_fields %}
+                    {{ h_field }}
+                {% endfor %}
+                <tr>
+                    <th colspan="2">
+                        {#                    TODO link to instance #}
+                        {{ sub_form.instance }}
+                    </th>
+                </tr>
+                {% if sub_form.errors %}
+                    <tr>
+                        <td colspan="2">
+                            {{ sub_form.errors }}
+                        </td>
+                    </tr>
+                {% endif %}
+                {% for g_fields in sub_form.group_fields %}
+                    <tr>
+                        {% for field in g_fields %}
+                            <td>
+                                {{ field }}
+                            </td>
+                            {% if not forloop.last %}
+                                <td>
+                                    <button type="button" class="copy_to_right">
+                                        ->
+                                    </button>
+                                </td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+            </tbody>
+        </table>
+        <script src="{% static "modeltranslation_rosetta/js/commons.js" %}"></script>
+        <script src="{% static "modeltranslation_rosetta/js/app.js" %}">
+        </script>
+        <p class="paginator">
+            {% for i in page_obj.paginator.page_range %}
+                {% if page_obj.number == i %}
+                    <span class="this-page">{{ i }}</span>
+                {% else %}
+                    <a href="?{% get_params 'page' i %}" {% if forloop.last %}class="end" {% endif %}>{{ i }}</a>
+                {% endif %}
+            {% endfor %}
+        </p>
+        <div class="submit-row">
+            <input type="submit" value="Сохранить" class="default" name="_save">
+        </div>
+    </form>
+
+{% endblock %}
+
+{% if not is_popup %}
+    {% block breadcrumbs %}
+        <div class="breadcrumbs">
+            <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+            &rsaquo; <a
+                href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+            &rsaquo; {{ opts.verbose_name_plural|capfirst }}
+        </div>
+    {% endblock %}
+{% endif %}
