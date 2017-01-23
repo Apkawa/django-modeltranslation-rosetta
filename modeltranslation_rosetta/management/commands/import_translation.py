@@ -1,14 +1,12 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import os
+import six
 import tablib
 from django.core.management.base import BaseCommand
 from modeltranslation.translator import translator
 from modeltranslation.utils import build_localized_fieldname
-
-from applications.core.uds_service.models import ServiceCategory
-
-CATEGORIES_PATH = '%s::' % ServiceCategory.ACTIVE_ROOT_ID
 
 
 def build_model_map():
@@ -26,6 +24,9 @@ class Command(BaseCommand):
     help = 'reloads permissions for specified apps, or all apps if no args are specified'
 
     model_map = build_model_map()
+
+    def add_arguments(self, parser):
+        parser.add_argument('filename', nargs=1, type=six.text_type)
 
     def group_dataset(self, dataset):
         group = {}
@@ -52,16 +53,24 @@ class Command(BaseCommand):
 
         obj.save(update_fields=update_fields)
 
-    def import_translation(self, filename):
+    def import_translation(self, filename, **options):
         stream = open(filename, 'rb').read()
-        dataset = tablib.import_set(stream, format='xlsx')
+        fmt = os.path.splitext(filename)[1][1:]
+        if fmt == 'xlsx':
+            dataset = tablib.import_set(stream, format='xlsx')
 
-        for row in self.group_dataset(dataset):
-            try:
-                self.import_row(row)
-            except Exception as e:
-                print row['Model'], row['object_id']
-                print e
+            for row in self.group_dataset(dataset):
+                try:
+                    self.import_row(row)
+                except Exception as e:
+                    print row['Model'], row['object_id']
+                    print e
+        elif fmt == 'po':
+            raise NotImplementedError("TODO import po file")
 
-    def handle(self, path, **options):
-        self.import_translation(path)
+    def handle(self, **options):
+        print options
+        filename = options.pop('filename')[0]
+        self.import_translation(
+            filename,
+            **options)
