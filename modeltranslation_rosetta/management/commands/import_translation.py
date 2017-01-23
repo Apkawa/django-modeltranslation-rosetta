@@ -6,6 +6,7 @@ import six
 import tablib
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from modeltranslation.translator import translator
 from modeltranslation.utils import build_localized_fieldname
 
@@ -77,6 +78,32 @@ class Command(BaseCommand):
                 row[to_lang] = m.string
                 yield row
 
+    def import_fail_rows(self, rows, to_lang, from_lang):
+
+        for r in rows:
+            field_name = build_localized_fieldname(r['field'], to_lang)
+            from_name = build_localized_fieldname(r['field'], from_lang)
+
+            Model = self.model_map[r['Model']]
+            objects = Model.objects.filter(**{from_name: r[from_lang].strip()})
+
+            for obj in objects:
+                update_fields = []
+                if (r[to_lang]
+                    and getattr(obj, from_name).strip() == r[from_lang].strip()
+                    and (getattr(obj, field_name) or '').strip() != (r[to_lang] or '').strip()
+                    ):
+                    update_fields.append(field_name)
+                    setattr(obj, field_name, r[to_lang])
+                if not update_fields:
+                    continue
+                print "SAVE", obj, from_name, r[from_lang]
+                try:
+                    obj.save(update_fields=update_fields)
+                except Exception as e:
+                    print r['Model'], r['object_id']
+                    print e
+
     def import_row(self, row, to_lang):
         Model = self.model_map[row['Model']]
         obj = Model.objects.get(id=row['object_id'])
@@ -84,24 +111,31 @@ class Command(BaseCommand):
         update_fields = []
         for r in row['rows']:
             field_name = build_localized_fieldname(r['field'], to_lang)
-            update_fields.append(field_name)
-            if r[to_lang]:
+
+            if r[to_lang] and getattr(obj, field_name) != r[to_lang]:
+                update_fields.append(field_name)
                 setattr(obj, field_name, r[to_lang])
 
-        obj.save(update_fields=update_fields)
+        if update_fields:
+            obj.save(update_fields=update_fields)
 
     def import_translation(self, filename, **options):
         fmt = os.path.splitext(filename)[1][1:]
         from_lang = options['from_lang']
         to_lang = options['to_lang']
+
+        fail_rows = []
+        flatten_dataset = []
+
         if fmt == 'xlsx':
             with open(filename, 'rb') as stream:
-                dataset = tablib.import_set(stream.read(), format='xlsx')
+                flatten_dataset = tablib.import_set(stream.read(), format='xlsx').dict
 
-            for row in self.group_dataset(dataset.dict):
+            for row in self.group_dataset(flatten_dataset):
                 try:
                     self.import_row(row, to_lang)
                 except Exception as e:
+                    fail_rows.append(row)
                     print row['Model'], row['object_id']
                     print e
 
@@ -109,14 +143,17 @@ class Command(BaseCommand):
             with open(filename, 'rb') as stream:
                 catalog = read_po(stream)
 
-            dataset = self.calalog_to_dataset(catalog, from_lang=from_lang, to_lang=to_lang)
+            flatten_dataset = self.calalog_to_dataset(catalog, from_lang=from_lang, to_lang=to_lang)
 
-            for row in self.group_dataset(dataset):
+            for row in self.group_dataset(flatten_dataset):
                 try:
                     self.import_row(row, to_lang)
                 except Exception as e:
+                    fail_rows.append(row)
                     print row['Model'], row['object_id']
                     print e
+
+        self.import_fail_rows(flatten_dataset, from_lang=from_lang, to_lang=to_lang)
 
     def handle(self, **options):
         print options

@@ -15,10 +15,12 @@ from babel.messages.pofile import write_po
 
 from ._utils import has_exclude, has_include, parse_model
 
+EXPORT_FILTERS = getattr(settings, 'MODELTRANSLATION_ROSETTA_EXPORT_FILTERS', {})
+
 
 class Command(BaseCommand):
     args = '<app app ...>'
-    help = 'reloads permissions for specified apps, or all apps if no args are specified'
+    help = 'export translations'
 
     def add_arguments(self, parser):
         parser.add_argument('filename', nargs=1, type=six.text_type)
@@ -57,6 +59,17 @@ class Command(BaseCommand):
             help='skip translated',
         )
 
+    def filter_queryset(self, queryset, model_opts):
+        if not EXPORT_FILTERS:
+            return queryset
+        model_name = '.'.join([model_opts['app_label'], model_opts['model_name']])
+        for k in [model_name, None]:
+            filter_cb = EXPORT_FILTERS.get(k)
+            if filter_cb and callable(filter_cb):
+                return filter_cb(queryset, model_opts)
+
+        return queryset
+
     def collect_translation(self, includes=None, excludes=None):
         """
         :param models: app_label | app_label.Model | app_label.Model.field
@@ -92,9 +105,9 @@ class Command(BaseCommand):
             if not has_include(model_opts, includes):
                 continue
 
-            query = model.objects
+            query = self.filter_queryset(model.objects, model_opts)
 
-            for o in query.filter().distinct():
+            for o in query.distinct():
                 for f, trans_f in fields.items():
                     translated_data = {lang: getattr(o, tf) or '' for lang, tf in trans_f.items()}
 
