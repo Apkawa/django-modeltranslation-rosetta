@@ -1,6 +1,9 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+from collections import defaultdict
+
+import six
 import tablib
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -10,12 +13,15 @@ from modeltranslation.utils import build_localized_fieldname
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po
 
+from ._utils import has_exclude, has_include, parse_model
+
 
 class Command(BaseCommand):
     args = '<app app ...>'
     help = 'reloads permissions for specified apps, or all apps if no args are specified'
 
     def add_arguments(self, parser):
+        parser.add_argument('filename', nargs=1, type=six.text_type)
         # Named (optional) arguments
         parser.add_argument(
             '--from_lang',
@@ -43,9 +49,13 @@ class Command(BaseCommand):
             default='xlsx',
             help='Format. xlsx or po',
         )
-
-    def parse_model(self, model):
-        return dict(zip(['app_label', 'model', 'field'], model.split('.') + [None] * 2))
+        parser.add_argument(
+            '--skip-translated',
+            action='store_true',
+            dest='skip_translated',
+            default=False,
+            help='skip translated',
+        )
 
     def collect_translation(self, includes=None, excludes=None):
         """
@@ -54,8 +64,8 @@ class Command(BaseCommand):
         :return:
         """
         models = translator.get_registered_models(abstract=False)
-        excludes = excludes and map(self.parse_model, excludes)
-        includes = includes and map(self.parse_model, includes)
+        excludes = excludes and map(parse_model, excludes)
+        includes = includes and map(parse_model, includes)
 
         for model in models:
             opts = translator.get_options_for_model(model)
@@ -69,41 +79,18 @@ class Command(BaseCommand):
                 for field_name in opts.fields.keys()
                 }
 
-            if excludes:
-                _exclude = False
-                for i in excludes:
-                    _exclude |= i['app_label'] == meta.app_label and i['model'] is None
-                    _exclude |= (i['app_label'] == meta.app_label
-                                 and i['model'] == meta.model_name
-                                 and i['field'] is None
-                                 )
-
-                    for f, tr_f in fields:
-                        if i['app_label'] == meta.app_label and i['model'] == meta.model_name and i['field'] == f:
-                            del fields[f]
-
-                if _exclude or not fields:
-                    break
-
-            if includes:
-                _include = False
-                for i in includes:
-                    _include |= i['app_label'] == meta.app_label and i['model'] is None
-                    _include |= (
-                        i['app_label'] == meta.app_label
-                        and i['model'] == meta.model_name
-                        and i['field'] is None
-                    )
-                    for f, tr_f in fields:
-                        if (i['app_label'] == meta.app_label
-                            and i['model'] == meta.model_name
-                            and i['field']
-                            and i['field'] != f):
-                            del fields[f]
-                if not _include or not fields:
-                    break
-
             model_name = "%s.%s" % (model._meta.app_label, model._meta.model_name)
+            model_opts = dict(
+                fields=fields,
+                app_label=meta.app_label,
+                model_name=meta.model_name,
+            )
+
+            if has_exclude(model_opts, excludes):
+                continue
+
+            if not has_include(model_opts, includes):
+                continue
 
             query = model.objects
 
@@ -115,12 +102,16 @@ class Command(BaseCommand):
                         model_name=model_name,
                         object_id=str(o.pk),
                         field=f,
+                        model=model,
+                        obj=o,
                         translated_data=translated_data
                     )
 
     def export_translation(self, filename, format='xlsx', **options):
         from_lang = options['from_lang']
         to_lang = options['to_lang']
+        skip_translated = options['skip_translated']
+
         translations = self.collect_translation(includes=options.get('includes'), excludes=options.get('excludes'))
         if format == 'xlsx':
             dataset = tablib.Dataset(headers=['Model', 'object_id', 'field', from_lang, to_lang])
@@ -136,13 +127,26 @@ class Command(BaseCommand):
             catalog = Catalog(locale=to_lang)
             for tr in translations:
                 msg_location = ('{model_name}.{field}.{object_id}'.format(**tr), 0)
-                msg_id = tr['translated_data'][from_lang]
-                msg_str = tr['translated_data'][to_lang]
-                catalog.add(msg_id, msg_str, locations=(msg_location,))
+                msg_id = tr['translated_data'][from_lang].strip().strip('\n')
+                msg_str = tr['translated_data'][to_lang].strip().strip('\n')
+                if skip_translated and msg_str:
+                    continue
+
+                model = tr['model']
+                obj = tr['obj']
+                comments = ('{app_title}->{model_title}:{obj} [{obj.id}]'.format(
+                    app_title=model._meta.app_config.verbose_name,
+                    model_title=model._meta.verbose_name,
+                    obj=obj
+                ),)
+                catalog.add(msg_id, msg_str, locations=(msg_location,),
+                    auto_comments=comments)
+
             with open(filename, 'wb') as f:
                 write_po(f, catalog)
 
-    def handle(self, filename=None, **options):
+    def handle(self, **options):
         fmt = options.pop('format', None) or 'xlsx'
+        filename = (options.pop('filename', None) or ['../model_translations.%s' % fmt])[0]
 
-        self.export_translation(filename=filename or '../model_translations.%s' % fmt, format=fmt, **options)
+        self.export_translation(filename=filename, format=fmt, **options)
