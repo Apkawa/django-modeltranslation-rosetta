@@ -51,6 +51,12 @@ class Command(BaseCommand):
             help='to lang',
         )
 
+        parser.add_argument(
+            '--cleanup',
+            action='store_true',
+            dest='cleanup',
+        )
+
     def group_dataset(self, dataset):
         group = {}
         key = None

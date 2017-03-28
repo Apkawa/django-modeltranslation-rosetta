@@ -2,3 +2,11 @@
 
 Project for translate all fields like django-rosetta
 
+
+# TODO
+
+* cleanup 
+    * `_X000D_` (WTF?)
+    * spaces in entity `&   nbsp ;`
+    * fix entity 
+    * validate html
