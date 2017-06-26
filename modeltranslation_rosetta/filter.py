@@ -8,15 +8,16 @@ from django.db.models import Q
 from .utils import get_model, build_model_name
 from modeltranslation.translator import translator
 from modeltranslation.utils import build_localized_fieldname
+from .export_translation import TRANSLATED, UNTRANSLATED
 
 
 class FilterForm(forms.Form):
     TRANSLATE_STATUS = (
         ('', 'All'),
-        ('untranslated', 'Untranslated'),
-        ('translated', 'Translated'),
-
+        (UNTRANSLATED, 'Untranslated'),
+        (TRANSLATED, 'Translated'),
     )
+
     translate_status = forms.ChoiceField(label='Translate status',
         choices=TRANSLATE_STATUS,
         required=False,
@@ -34,7 +35,7 @@ class FilterForm(forms.Form):
         self['fields'].field.choices = [
             (name, model._meta.get_field(name).verbose_name)
             for name in self.model_info['opts'].fields
-            ]
+        ]
 
     @property
     def qs(self):
@@ -42,6 +43,7 @@ class FilterForm(forms.Form):
             data = self.cleaned_data
             if not data.get('translate_status'):
                 return self.queryset
+
             translate_status = data['translate_status']
 
             base_fields = data.get('fields') or self.model_info['opts'].fields.keys()
@@ -52,7 +54,7 @@ class FilterForm(forms.Form):
 
             q_filter = Q()
             for f in fields:
-                if translate_status == 'untranslated':
+                if translate_status == UNTRANSLATED:
                     q_filter |= (Q(**{f + '__isnull': True}) | Q(**{f: ''}))
                 else:
                     q_filter &= (Q(**{f + '__isnull': False}) & ~Q(**{f: ''}))

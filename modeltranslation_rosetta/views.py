@@ -1,18 +1,24 @@
 # coding: utf-8
 from __future__ import unicode_literals
+from io import BytesIO
 from django.forms.models import modelform_factory, modelformset_factory
 from functools import partial, wraps
 
+from django.shortcuts import redirect
+from django.utils import timezone
+from django.utils.timezone import localtime
 from django.views.generic.list import ListView, MultipleObjectMixin
 
 from .admin_views import AdminTemplateView, AdminFormView
 
 from .utils import get_models, get_model
+from .utils.response import FileResponse
 from .templates import get_template
 
 from .forms import FieldForm, FieldFormSet
 
 from .filter import FilterForm
+from .export_translation import export_po, collect_translations
 
 
 class ListModelView(AdminTemplateView):
@@ -22,6 +28,37 @@ class ListModelView(AdminTemplateView):
         context = super(ListModelView, self).get_context_data(**kwargs)
         context['translated_models'] = get_models()
         return context
+
+    def get_filename(self, includes=None):
+        now = localtime(timezone.now())
+        if includes:
+            includes = " ".join(includes)
+        else:
+            includes = 'All models'
+
+        return '{includes}_{now:%Y-%m-%d %H:%M}.po'.format(
+            includes=includes,
+            now=now)
+
+    def post(self, request, *args, **kwargs):
+        if request.GET.get('_export') == 'po':
+            from_lang = 'ru'
+            to_lang = 'en'
+            includes = request.POST.getlist('include') or None
+            translations = collect_translations(
+                from_lang=from_lang,
+                to_lang=to_lang,
+                includes=includes,
+            )
+            stream = BytesIO()
+            export_po(stream,
+                to_lang=to_lang,
+                translations=translations)
+            stream.seek(0)
+            response = FileResponse(stream.read(), self.get_filename(includes))
+            return response
+
+        return redirect('.')
 
 
 class EditTranslationView(AdminFormView, MultipleObjectMixin):
@@ -76,3 +113,35 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         context = super(EditTranslationView, self).get_context_data(**kwargs)
         context['filter_form'] = self.filter_form
         return context
+
+    def get_filename(self):
+        model_key = self.get_model_info()['model_key']
+        now = localtime(timezone.now())
+        fields = " ".join(self.filter_form.cleaned_data['fields'])
+        if fields:
+            fields = '_(%s)' % fields
+
+        return '{model_key}{fields}_{now:%Y-%m-%d %H:%M}.po'.format(
+            model_key=model_key,
+            fields=fields or '',
+            now=now)
+
+    def get(self, request, *args, **kwargs):
+        response = super(EditTranslationView, self).get(*args, **kwargs)
+        if request.GET.get('_export') == 'po':
+            from_lang = 'ru'
+            to_lang = 'en'
+            translations = collect_translations(
+                from_lang=from_lang,
+                to_lang=to_lang,
+                translate_status=self.filter_form.cleaned_data['translate_status'],
+                queryset=self.object_list
+            )
+            stream = BytesIO()
+            export_po(stream,
+                to_lang=to_lang,
+                translations=translations)
+            stream.seek(0)
+            response = FileResponse(stream.read(), self.get_filename())
+            return response
+        return response
