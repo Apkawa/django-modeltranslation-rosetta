@@ -18,7 +18,7 @@ from .templates import get_template
 from .forms import FieldForm, FieldFormSet
 
 from .filter import FilterForm
-from .export_translation import export_po, collect_translations
+from .export_translation import export_po, collect_translations, get_opts_from_model
 
 
 class ListModelView(AdminTemplateView):
@@ -131,11 +131,19 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         if request.GET.get('_export') == 'po':
             from_lang = 'ru'
             to_lang = 'en'
+            includes = None
+
+            fields = self.filter_form.cleaned_data.get('fields')
+            if fields:
+                opts = get_opts_from_model(self.object_list.model)
+                includes = ['.'.join([opts['model_key'], f]) for f in fields]
+
             translations = collect_translations(
                 from_lang=from_lang,
                 to_lang=to_lang,
                 translate_status=self.filter_form.cleaned_data['translate_status'],
-                queryset=self.object_list
+                queryset=self.object_list,
+                includes=includes,
             )
             stream = BytesIO()
             export_po(stream,

@@ -42,9 +42,11 @@ def collect_translation_from_queryset(qs, fields=None):
     model = qs.model
     model_opts = get_opts_from_model(model)
 
+    fields = map(lambda f: f.split('.')[-1], fields or [])
+
     trans_fields = {
         f_name: v for f_name, v in model_opts['fields'].items()
-        if not fields or fields in f_name in fields
+        if not fields or f_name in fields
     }
 
     for o in qs.distinct():
@@ -99,7 +101,7 @@ def collect_translations(
         queryset=None,
 ):
     if queryset:
-        translations = collect_translation_from_queryset(queryset)
+        translations = collect_translation_from_queryset(queryset, fields=includes)
     else:
         collected_models = collect_models(includes, excludes)
         translations = (
