@@ -8,7 +8,7 @@ from django.db.models import Q
 from .utils import get_model, build_model_name
 from modeltranslation.translator import translator
 from modeltranslation.utils import build_localized_fieldname
-from .export_translation import TRANSLATED, UNTRANSLATED
+from .export_translation import TRANSLATED, UNTRANSLATED, filter_queryset, get_opts_from_model
 
 
 class FilterForm(forms.Form):
@@ -39,10 +39,11 @@ class FilterForm(forms.Form):
 
     @property
     def qs(self):
+        qs = filter_queryset(self.queryset, get_opts_from_model(self.queryset.model))
         if self.is_valid():
             data = self.cleaned_data
             if not data.get('translate_status'):
-                return self.queryset
+                return qs
 
             translate_status = data['translate_status']
 
@@ -58,5 +59,5 @@ class FilterForm(forms.Form):
                     q_filter |= (Q(**{f + '__isnull': True}) | Q(**{f: ''}))
                 else:
                     q_filter &= (Q(**{f + '__isnull': False}) & ~Q(**{f: ''}))
-            return self.queryset.filter(q_filter)
-        return self.queryset
+            return qs.filter(q_filter)
+        return qs
