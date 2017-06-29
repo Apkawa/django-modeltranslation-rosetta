@@ -17,7 +17,7 @@
         <button name="_export" value="po">Export PO</button>
     </form>
     <hr>
-    <form action="import_trans/" method="post">
+    <form action="import_trans/" method="post" enctype="multipart/form-data">
     {% csrf_token %}
         {{ import_form }}
         <button name="_import" value="po">Import PO</button>
