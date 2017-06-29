@@ -105,9 +105,8 @@ class AdminClassViewMixin(object):
     def get_urls(self):
         urlpatterns = self.get_extra_urls()
         original_views = self._get_original_views()
-        view_classes = dict(original_views)
-        view_classes.update(self.get_view_classes())
-        for name, view in view_classes.items():
+        view_classes = self.get_view_classes().items() + original_views.items()
+        for name, view in view_classes:
             pattern = None
             if isinstance(view, (list, tuple)):
                 pattern, view = view

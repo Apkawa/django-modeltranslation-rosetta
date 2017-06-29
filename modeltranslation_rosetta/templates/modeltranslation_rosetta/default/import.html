@@ -1,0 +1,21 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+{% block content %}
+    <form action="." method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+        {{ form }}
+        <button name="_import" value="po">Import PO</button>
+    </form>
+
+{% endblock %}
+
+{% if not is_popup %}
+    {% block breadcrumbs %}
+        <div class="breadcrumbs">
+            <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+            &rsaquo; <a
+                href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+            &rsaquo; {{ opts.verbose_name_plural|capfirst }}
+        </div>
+    {% endblock %}
+{% endif %}

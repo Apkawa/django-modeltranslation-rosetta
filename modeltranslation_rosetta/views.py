@@ -1,6 +1,9 @@
 # coding: utf-8
 from __future__ import unicode_literals
 from io import BytesIO
+
+from django.contrib import messages
+from django.db.transaction import atomic
 from django.forms.models import modelform_factory, modelformset_factory
 from functools import partial, wraps
 
@@ -9,13 +12,14 @@ from django.utils import timezone
 from django.utils.timezone import localtime
 from django.views.generic.list import ListView, MultipleObjectMixin
 
+from modeltranslation_rosetta.import_translation import load_translation, group_dataset, load_same_rows
 from .admin_views import AdminTemplateView, AdminFormView
 
 from .utils import get_models, get_model
 from .utils.response import FileResponse
 from .templates import get_template
 
-from .forms import FieldForm, FieldFormSet
+from .forms import FieldForm, FieldFormSet, ImportForm
 
 from .filter import FilterForm
 from .export_translation import export_po, collect_translations, get_opts_from_model
@@ -27,6 +31,7 @@ class ListModelView(AdminTemplateView):
     def get_context_data(self, **kwargs):
         context = super(ListModelView, self).get_context_data(**kwargs)
         context['translated_models'] = get_models()
+        context['import_form'] = ImportForm()
         return context
 
     def get_filename(self, includes=None):
@@ -153,3 +158,22 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
             response = FileResponse(stream.read(), self.get_filename())
             return response
         return response
+
+
+class ImportPOView(AdminFormView):
+    form_class = ImportForm
+    template_name = 'modeltranslation_rosetta/default/import.html'
+
+    @atomic
+    def form_valid(self, form):
+        from_lang = 'ru'
+        to_lang = 'en'
+        flatten_dataset = form.cleaned_data['file']
+        result = load_translation(
+            group_dataset(flatten_dataset),
+            to_lang=to_lang)
+
+        messages.add_message(self.request, messages.SUCCESS, result['stat'])
+
+        load_same_rows(flatten_dataset, from_lang=from_lang, to_lang=to_lang)
+        return redirect('.')

@@ -5,7 +5,7 @@ from django.utils.translation import ugettext as _
 from django.contrib import admin
 
 from .custom_admin import CustomAdmin
-from .views import ListModelView, EditTranslationView
+from .views import ListModelView, EditTranslationView, ImportPOView
 
 
 class TranslationAdmin(CustomAdmin):
@@ -16,6 +16,12 @@ class TranslationAdmin(CustomAdmin):
 
     changelist_view = ListModelView
     change_view = EditTranslationView
+
+    view_classes = {
+        'import_trans': (
+            r'^import_trans/$', ImportPOView
+        )
+    }
 
     def has_add_permission(self, request):
         return False

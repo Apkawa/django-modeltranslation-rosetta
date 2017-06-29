@@ -5,9 +5,21 @@ from django.forms.formsets import TOTAL_FORM_COUNT
 
 from django.forms.models import modelform_factory, formset_factory, fields_for_model
 from django.utils.translation import ungettext
-from modeltranslation.utils import build_localized_fieldname
 
+from .utils import build_localized_fieldname
+from .import_translation import parse_po
 from .utils import get_model, build_model_name
+
+
+class ImportForm(forms.Form):
+    file = forms.FileField()
+
+    def clean_file(self):
+        f = self.cleaned_data['file']
+        try:
+            return parse_po(f)
+        except:
+            raise forms.ValidationError("Invalid po file")
 
 
 class FieldFormSet(forms.BaseModelFormSet):
@@ -97,7 +109,7 @@ class FieldForm(forms.ModelForm):
             )]
             for field_name in sorted(opts.fields.keys())
             if not self._only_fields or field_name in self._only_fields
-            ]
+        ]
         return fields
 
     def build_fields(self):
