@@ -120,7 +120,9 @@ def collect_translations(
 
 def export_po(stream,
               to_lang,
-              translations):
+              translations,
+              queryset=None,
+              ):
     catalog = Catalog(locale=to_lang)
     for tr in translations:
         msg_location = ('{model_key}.{field}.{object_id}'.format(**tr), 0)
@@ -137,6 +139,31 @@ def export_po(stream,
         ),)
         catalog.add(msg_id, msg_str, locations=(msg_location,),
             auto_comments=comments)
+
+    if queryset:
+        """
+        Особая уличная магия, 
+        для корректной выгрузки переводов одного объекта, 
+        но он может быть переведен в других объектах
+        """
+        opts = get_opts_from_model(queryset.model)
+        qs_locations = {"%s.%s" % (opts['model_key'], pk) for pk in queryset.values_list('pk', flat=True)}
+        new_catalog = Catalog(locale=to_lang)
+        for message in catalog:
+            locations = set()
+
+            for (loc, n) in message.locations:
+                spl = loc.split('.')
+                del spl[2]
+                locations.add(".".join(spl))
+
+            if (locations & qs_locations):
+                kw = {k: getattr(message, k) for k in ['auto_comments', 'locations']}
+
+                new_catalog.add(message.id, message.string,
+                    **kw
+                )
+        catalog = new_catalog
 
     write_po(stream, catalog)
 

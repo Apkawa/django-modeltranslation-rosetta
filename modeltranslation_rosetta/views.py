@@ -58,7 +58,8 @@ class ListModelView(AdminTemplateView):
             stream = BytesIO()
             export_po(stream,
                 to_lang=to_lang,
-                translations=translations)
+                translations=translations
+            )
             stream.seek(0)
             response = FileResponse(stream.read(), self.get_filename(includes))
             return response
@@ -121,14 +122,15 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
 
     def get_filename(self):
         model_key = self.get_model_info()['model_key']
+        parts = [
+            model_key,
+            " ".join(self.filter_form.cleaned_data.get('fields') or []),
+            self.filter_form.cleaned_data.get('search')
+        ]
         now = localtime(timezone.now())
-        fields = " ".join(self.filter_form.cleaned_data['fields'])
-        if fields:
-            fields = '_(%s)' % fields
 
-        return '{model_key}{fields}_{now:%Y-%m-%d %H:%M}.po'.format(
-            model_key=model_key,
-            fields=fields or '',
+        return '{name}_{now:%Y-%m-%d %H:%M}.po'.format(
+            name="_".join(filter(None, parts)),
             now=now)
 
     def get(self, request, *args, **kwargs):
@@ -147,13 +149,16 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
                 from_lang=from_lang,
                 to_lang=to_lang,
                 translate_status=self.filter_form.cleaned_data['translate_status'],
-                queryset=self.object_list,
+                queryset=self.get_queryset(),
                 includes=includes,
             )
             stream = BytesIO()
-            export_po(stream,
+            export_po(
+                stream,
                 to_lang=to_lang,
-                translations=translations)
+                translations=translations,
+                queryset=self.object_list
+            )
             stream.seek(0)
             response = FileResponse(stream.read(), self.get_filename())
             return response
