@@ -4,12 +4,11 @@ from __future__ import unicode_literals
 import tablib
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po
-from django.conf import settings
+from io import BytesIO
 from modeltranslation.translator import translator
 from .import_translation import normalize_text
 from .utils import get_cleaned_fields, parse_model, get_opts_from_model
-
-EXPORT_FILTERS = getattr(settings, 'MODELTRANSLATION_ROSETTA_EXPORT_FILTERS', {})
+from .settings import (EXPORT_FILTERS, DEFAULT_TO_LANG, DEFAULT_FROM_LANG)
 
 UNTRANSLATED = 'U'
 TRANSLATED = 'T'
@@ -38,11 +37,11 @@ def filter_queryset(queryset, model_opts, export_filters=EXPORT_FILTERS):
     return queryset
 
 
-def collect_translation_from_queryset(qs, fields=None):
+def collect_queryset_translations(qs, fields=None):
     model = qs.model
     model_opts = get_opts_from_model(model)
 
-    fields = map(lambda f: f.split('.')[-1], fields or [])
+    fields = set(map(lambda f: f.split('.')[-1], fields or []))
 
     trans_fields = {
         f_name: v for f_name, v in model_opts['fields'].items()
@@ -64,7 +63,7 @@ def collect_translation_from_queryset(qs, fields=None):
             )
 
 
-def collect_translation(model_opts, fields=None):
+def collect_model_translations(model_opts, fields=None):
     """
     :param model_opts:
     :param fields: list of field_name
@@ -72,7 +71,7 @@ def collect_translation(model_opts, fields=None):
     """
     model = model_opts['model']
     qs = filter_queryset(model.objects, model_opts)
-    return collect_translation_from_queryset(qs, fields)
+    return collect_queryset_translations(qs, fields)
 
 
 def collect_models(includes=None, excludes=None):
@@ -93,42 +92,43 @@ def collect_models(includes=None, excludes=None):
 
 
 def collect_translations(
-        from_lang,
-        to_lang,
+        from_lang=DEFAULT_FROM_LANG,
+        to_lang=DEFAULT_TO_LANG,
         translate_status=None,
         includes=False,
         excludes=False,
         queryset=None,
 ):
     if queryset:
-        translations = collect_translation_from_queryset(queryset, fields=includes)
+        translations = collect_queryset_translations(queryset, fields=includes)
     else:
         collected_models = collect_models(includes, excludes)
         translations = (
             t for model_opts in collected_models
-            for t in collect_translation(model_opts)
+            for t in collect_model_translations(model_opts)
         )
     for tr in translations:
         msg_id = tr['translated_data'][from_lang]
         msg_str = tr['translated_data'][to_lang]
         if not allow_export(msg_str, msg_id, translate_status):
             continue
-        tr['translated_data']['from_lang'] = msg_id
-        tr['translated_data']['to_lang'] = msg_str
         yield tr
 
 
-def export_po(stream,
-              to_lang,
-              translations,
+def export_po(translations,
+              from_lang=DEFAULT_FROM_LANG,
+              to_lang=DEFAULT_TO_LANG,
               queryset=None,
+              stream=None,
               ):
+    stream = stream or BytesIO()
+    assert hasattr(stream, 'write') and hasattr(stream, 'seek'), "stream must be file-like object"
     catalog = Catalog(locale=to_lang)
     for tr in translations:
         msg_location = ('{model_key}.{field}.{object_id}'.format(**tr), 0)
 
-        msg_id = tr['translated_data']['from_lang']
-        msg_str = tr['translated_data']['to_lang']
+        msg_id = tr['translated_data'][from_lang]
+        msg_str = tr['translated_data'][to_lang]
 
         model = tr['model']
         obj = tr['obj']
@@ -157,15 +157,19 @@ def export_po(stream,
                 del spl[2]
                 locations.add(".".join(spl))
 
-            if (locations & qs_locations):
+            if locations & qs_locations:
                 kw = {k: getattr(message, k) for k in ['auto_comments', 'locations']}
 
-                new_catalog.add(message.id, message.string,
+                new_catalog.add(
+                    message.id,
+                    message.string,
                     **kw
                 )
         catalog = new_catalog
 
     write_po(stream, catalog)
+    stream.seek(0)
+    return stream
 
 
 def export_xlsx(stream,

@@ -1,17 +1,15 @@
 # coding: utf-8
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
-from collections import defaultdict
-
-import six
 import sys
-import tablib
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
+
 from ...export_translation import (
     export_po,
-    export_xlsx,
     collect_models,
     collect_translations,
     UNTRANSLATED
@@ -111,10 +109,10 @@ class Command(BaseCommand):
                 excludes=options.get('excludes'),
             )
             for model in models:
-                print '{model_key} [{fields}]'.format(
+                print('{model_key} [{fields}]'.format(
                     model_key=model['model_key'],
                     fields=', '.join(model['fields'])
-                )
+                ))
             return
 
         translations = collect_translations(**kw)

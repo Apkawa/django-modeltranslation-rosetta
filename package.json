@@ -1,6 +1,9 @@
 {
+  "scripts": {
+    "watch": "gulp watch:webpack",
+    "build": "gulp build --production"
+  },
   "dependencies": {
-    "gulp-frontend-tools": "^0.1.10",
-    "jquery": "^3.1.1"
+    "gulp-frontend-tools": "^0.2.25"
   }
 }

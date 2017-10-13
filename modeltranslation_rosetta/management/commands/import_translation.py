@@ -1,4 +1,6 @@
 # coding: utf-8
+from __future__ import print_function
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
@@ -89,7 +91,7 @@ class Command(BaseCommand):
             group_dataset(flatten_dataset),
             to_lang=to_lang)
 
-        print result['stat']
+        print(result['stat'])
 
         load_same_rows(flatten_dataset, from_lang=from_lang, to_lang=to_lang)
 
@@ -98,7 +100,7 @@ class Command(BaseCommand):
         try:
             self.import_translation(**options)
         except Exception as e:
-            print e
+            print(e)
             transaction.savepoint_rollback(sid)
             return
 

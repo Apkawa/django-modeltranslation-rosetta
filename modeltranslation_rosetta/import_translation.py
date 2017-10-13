@@ -1,10 +1,17 @@
 # coding: utf-8
+from __future__ import print_function
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import tablib
 from babel.messages.pofile import read_po
 from modeltranslation.translator import translator
 from modeltranslation.utils import build_localized_fieldname
+
+from .settings import (
+    DEFAULT_TO_LANG,
+    DEFAULT_FROM_LANG
+)
 
 
 def normalize_text(text):
@@ -37,6 +44,8 @@ def group_dataset(dataset):
                  for k in ['field', 'from_lang', 'to_lang']
                  }
         group['fields'].append(field)
+    # return last group
+    yield group
 
 
 def calalog_to_dataset(catalog):
@@ -56,7 +65,7 @@ def calalog_to_dataset(catalog):
             yield row
 
 
-def load_translation(grouped_dataset, to_lang):
+def load_translation(grouped_dataset, to_lang=DEFAULT_TO_LANG):
     stat = dict.fromkeys(['update', 'skip', 'fail', 'total'], 0)
     fail_rows = []
     for row in grouped_dataset:
@@ -67,13 +76,13 @@ def load_translation(grouped_dataset, to_lang):
             else:
                 stat['skip'] += 1
         except Exception as e:
-            print e
+            print(e)
             fail_rows.append(row)
             stat['fail'] += 1
     return {'stat': stat, 'fail_rows': fail_rows}
 
 
-def load_same_rows(rows, to_lang, from_lang):
+def load_same_rows(rows, to_lang=DEFAULT_TO_LANG, from_lang=DEFAULT_FROM_LANG):
     """
 
     :param rows:
@@ -95,7 +104,7 @@ def load_same_rows(rows, to_lang, from_lang):
 
         for obj in objects:
             update_fields = []
-            if (r[to_lang]
+            if (msg_str
                 and normalize_text(getattr(obj, from_name)) == msg_id
                 and normalize_text(getattr(obj, to_name)) != msg_str
                 ):
@@ -103,12 +112,12 @@ def load_same_rows(rows, to_lang, from_lang):
                 setattr(obj, to_name, msg_str)
             if not update_fields:
                 continue
-            print "SAVE", obj, from_name, msg_id
+            print("SAVE", obj, from_name, msg_id)
             try:
                 obj.save(update_fields=update_fields)
             except Exception as e:
-                print r['Model'], r['object_id']
-                print e
+                print(r['Model'], r['object_id'])
+                print(e)
 
 
 def import_row(row, to_lang):
@@ -118,7 +127,7 @@ def import_row(row, to_lang):
     update_fields = []
     for field in row['fields']:
         to_field_name = build_localized_fieldname(field['field'], to_lang)
-        msg_str = field['to_lang']
+        msg_str = normalize_text(field['to_lang']).strip()
         if msg_str and normalize_text(getattr(obj, to_field_name)) != msg_str:
             update_fields.append(to_field_name)
             setattr(obj, to_field_name, msg_str)

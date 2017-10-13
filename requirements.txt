@@ -1,7 +1,6 @@
-django>=1.8
-django-modeltranslation
+-r package_requirements.txt
+-r test_requirements.txt
 
-pytest
-pytest-django
-pytest-pythonpath
-mock
+django>=1.8,<2.0
+pypandoc
+ipython

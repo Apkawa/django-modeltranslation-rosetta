@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 from io import BytesIO
 
+from django.conf import settings
 from django.contrib import messages
 from django.db.transaction import atomic
 from django.forms.models import modelform_factory, modelformset_factory
@@ -23,6 +24,8 @@ from .forms import FieldForm, FieldFormSet, ImportForm
 
 from .filter import FilterForm
 from .export_translation import export_po, collect_translations, get_opts_from_model
+
+from .settings import DEFAULT_FROM_LANG, DEFAULT_TO_LANG
 
 
 class ListModelView(AdminTemplateView):
@@ -47,20 +50,21 @@ class ListModelView(AdminTemplateView):
 
     def post(self, request, *args, **kwargs):
         if request.GET.get('_export') == 'po':
-            from_lang = 'ru'
-            to_lang = 'en'
+            # TODO select lang
+            form_data = {}
+
+            from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
+            to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
             includes = request.POST.getlist('include') or None
             translations = collect_translations(
                 from_lang=from_lang,
                 to_lang=to_lang,
                 includes=includes,
             )
-            stream = BytesIO()
-            export_po(stream,
+            stream = export_po(
                 to_lang=to_lang,
                 translations=translations
             )
-            stream.seek(0)
             response = FileResponse(stream.read(), self.get_filename(includes))
             return response
 
@@ -136,11 +140,15 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
     def get(self, request, *args, **kwargs):
         response = super(EditTranslationView, self).get(*args, **kwargs)
         if request.GET.get('_export') == 'po':
-            from_lang = 'ru'
-            to_lang = 'en'
+            form_data = self.filter_form.cleaned_data
+
+            # TODO add into filter form
+            from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
+            to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
+
             includes = None
 
-            fields = self.filter_form.cleaned_data.get('fields')
+            fields = form_data.get('fields')
             if fields:
                 opts = get_opts_from_model(self.object_list.model)
                 includes = ['.'.join([opts['model_key'], f]) for f in fields]
@@ -148,18 +156,15 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
             translations = collect_translations(
                 from_lang=from_lang,
                 to_lang=to_lang,
-                translate_status=self.filter_form.cleaned_data['translate_status'],
+                translate_status=form_data['translate_status'],
                 queryset=self.get_queryset(),
                 includes=includes,
             )
-            stream = BytesIO()
-            export_po(
-                stream,
+            stream = export_po(
                 to_lang=to_lang,
                 translations=translations,
                 queryset=self.object_list
             )
-            stream.seek(0)
             response = FileResponse(stream.read(), self.get_filename())
             return response
         return response
@@ -171,9 +176,13 @@ class ImportPOView(AdminFormView):
 
     @atomic
     def form_valid(self, form):
-        from_lang = 'ru'
-        to_lang = 'en'
-        flatten_dataset = form.cleaned_data['file']
+        form_data = form.cleaned_data
+
+        # TODO add into filter form
+        from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
+        to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
+
+        flatten_dataset = form_data['file']
         result = load_translation(
             group_dataset(flatten_dataset),
             to_lang=to_lang)
