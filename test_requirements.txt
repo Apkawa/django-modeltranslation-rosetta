@@ -1,6 +1,7 @@
 pytest
 pytest-django
 pytest-pythonpath
+pytest-cov
 mock
 
 factory_boy
