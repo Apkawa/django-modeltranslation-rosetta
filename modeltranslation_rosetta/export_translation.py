@@ -1,11 +1,21 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import shutil
+from tempfile import NamedTemporaryFile
+
 import tablib
 from babel.messages.catalog import Catalog
-from babel.messages.pofile import write_po
+from babel.messages.pofile import write_po, read_po
 from io import BytesIO
 from modeltranslation.translator import translator
+from openpyxl import Workbook
+from openpyxl.cell import WriteOnlyCell, Cell
+from openpyxl.comments import Comment
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Protection, Alignment
+from openpyxl.worksheet.protection import SheetProtection
+
 from .import_translation import normalize_text
 from .utils import get_cleaned_fields, parse_model, get_opts_from_model
 from .settings import (EXPORT_FILTERS, DEFAULT_TO_LANG, DEFAULT_FROM_LANG)
@@ -138,7 +148,7 @@ def export_po(translations,
             obj=obj
         ),)
         catalog.add(msg_id, msg_str, locations=(msg_location,),
-            auto_comments=comments)
+                    auto_comments=comments)
 
     if queryset:
         """
@@ -147,7 +157,8 @@ def export_po(translations,
         но он может быть переведен в других объектах
         """
         opts = get_opts_from_model(queryset.model)
-        qs_locations = {"%s.%s" % (opts['model_key'], pk) for pk in queryset.values_list('pk', flat=True)}
+        qs_locations = {"%s.%s" % (opts['model_key'], pk) for pk in
+                        queryset.values_list('pk', flat=True)}
         new_catalog = Catalog(locale=to_lang)
         for message in catalog:
             locations = set()
@@ -172,17 +183,63 @@ def export_po(translations,
     return stream
 
 
-def export_xlsx(stream,
-                to_lang,
-                translations,
+def export_xlsx(translations,
+                from_lang=DEFAULT_FROM_LANG,
+                to_lang=DEFAULT_TO_LANG,
+                queryset=None,
+                stream=None,
                 ):
-    dataset = tablib.Dataset(headers=['Model', 'object_id', 'field', from_lang, to_lang])
-    for tr in translations:
-        msg_id = tr['translated_data']['from_lang'].strip().strip('\n')
-        msg_str = tr['translated_data']['to_lang'].strip().strip('\n')
+    stream = stream or BytesIO()
+    po_file_stream = export_po(
+        translations=translations, from_lang=from_lang,
+        to_lang=to_lang, queryset=queryset)
 
-        dataset.append([tr['model_name'], tr['object_id'], tr['field'],
-                        msg_id,
-                        msg_str,
-                        ])
-    stream.write(dataset.xlsx)
+    catalog = read_po(po_file_stream)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.protection = SheetProtection(sheet=True,
+                                    selectLockedCells=False,
+                                    selectUnlockedCells=False,
+                                    formatColumns=False,
+                                    formatRows=False,
+                                    )
+    ws.append(["comment", "locations", from_lang, to_lang])
+    align = Alignment(wrap_text=True, vertical='top')
+    for i, m in enumerate(catalog, start=1):
+        if not m.id:
+            continue
+        comment = ""
+        if m.context:
+            comment = f"Context: {m.context}\n"
+        comment += "\n".join(m.auto_comments)
+        comment_cell = WriteOnlyCell(ws, value=comment)
+        from_lang_cell = WriteOnlyCell(ws, value=m.id)
+        to_lang_cell = WriteOnlyCell(ws, value=normalize_text(m.string))
+        to_lang_cell.protection = Protection(locked=False)
+
+        comment_cell.alignment = align
+        from_lang_cell.alignment = align
+        to_lang_cell.alignment = align
+
+        locations = '\n'.join([path for path, _ in m.locations])
+        meta_cell = WriteOnlyCell(ws, value=locations)
+        max_height_lines = max(
+            [len(c.value.splitlines()) for c in [comment_cell, from_lang_cell, to_lang_cell] if c.value])
+        ws.append([comment_cell, meta_cell, from_lang_cell, to_lang_cell])
+        ws.row_dimensions[i].height = 20 * max_height_lines
+
+    ws.column_dimensions['B'].hidden = True
+
+    ws.column_dimensions[get_column_letter(1)].width = 50
+    for c in range(2, 5):
+        ws.column_dimensions[get_column_letter(c)].width = 100
+
+    with NamedTemporaryFile(suffix=".xlsx") as tf:
+        wb.save(tf.name)
+
+        shutil.copyfileobj(tf.file, stream)
+
+    stream.flush()
+    stream.seek(0)
+    return stream

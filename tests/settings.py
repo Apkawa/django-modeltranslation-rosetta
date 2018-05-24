@@ -28,7 +28,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.staticfiles',
     'django.contrib.messages',
-
+    
+    'django_extensions',
     'modeltranslation_rosetta',
     'modeltranslation',
     'tests',

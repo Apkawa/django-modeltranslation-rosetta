@@ -20,12 +20,12 @@ from modeltranslation_rosetta.import_translation import (
 )
 
 from .models import Article
-from .fixtures import ArticleFixture
+from .fixtures import ArticleFactory
 
 
 class GenericTestCase(TestCase):
     def setUp(self):
-        self.article = ArticleFixture()
+        self.article = ArticleFactory()
 
     def test_collect_models_all(self):
         models = list(collect_models())

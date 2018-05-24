@@ -36,6 +36,7 @@ def group_dataset(dataset):
         cur_key = (row['model_key'], row['object_id'])
         if key != cur_key:
             if group:
+                #
                 yield group
             key = cur_key
             group = row
@@ -48,20 +49,47 @@ def group_dataset(dataset):
     yield group
 
 
-def calalog_to_dataset(catalog):
+def calalog_to_dataset(catalog, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
     model_map = build_model_map()
     for m in catalog:
         if not m.id:
             pass
+        text_row = {
+            'from_lang': from_lang,
+            'to_lang': to_lang,  # may be set
+            from_lang: m.id,
+            to_lang: normalize_text(m.string)
+        }
         for path, _ in m.locations:
             app_name, model_name, field, object_id = path.split('.')
             model_key = '.'.join([app_name, model_name])
             row = dict(zip(
                 ['model_key', 'field', 'object_id', 'app_name', 'model_name'],
                 [model_key, field, object_id, app_name, model_name]))
-            row['from_lang'] = m.id
-            row['to_lang'] = normalize_text(m.string)
             row['model'] = model_map[model_key]
+            row.update(text_row)
+            yield row
+
+
+def xlsx_to_dataset(td_set):
+    model_map = build_model_map()
+    comment_name, locations_name, from_lang_name, to_lang_name = td_set.headers[:4]
+    for d in td_set.dict:
+        locations = d[locations_name].splitlines()
+        text_row = {
+            'from_lang': from_lang_name,
+            'to_lang': to_lang_name,  # may be set
+            from_lang_name: d[from_lang_name],
+            to_lang_name: d[to_lang_name]
+        }
+        for path in locations:
+            app_name, model_name, field, object_id = path.split('.')
+            model_key = '.'.join([app_name, model_name])
+            row = dict(zip(
+                ['model_key', 'field', 'object_id', 'app_name', 'model_name'],
+                [model_key, field, object_id, app_name, model_name]))
+            row['model'] = model_map[model_key]
+            row.update(text_row)
             yield row
 
 
@@ -105,9 +133,9 @@ def load_same_rows(rows, to_lang=DEFAULT_TO_LANG, from_lang=DEFAULT_FROM_LANG):
         for obj in objects:
             update_fields = []
             if (msg_str
-                and normalize_text(getattr(obj, from_name)) == msg_id
-                and normalize_text(getattr(obj, to_name)) != msg_str
-                ):
+                    and normalize_text(getattr(obj, from_name)) == msg_id
+                    and normalize_text(getattr(obj, to_name)) != msg_str
+            ):
                 update_fields.append(to_name)
                 setattr(obj, to_name, msg_str)
             if not update_fields:
@@ -127,7 +155,7 @@ def import_row(row, to_lang):
     update_fields = []
     for field in row['fields']:
         to_field_name = build_localized_fieldname(field['field'], to_lang)
-        msg_str = normalize_text(field['to_lang']).strip()
+        msg_str = normalize_text(field[to_lang]).strip()
         if msg_str and normalize_text(getattr(obj, to_field_name)) != msg_str:
             update_fields.append(to_field_name)
             setattr(obj, to_field_name, msg_str)
@@ -138,10 +166,11 @@ def import_row(row, to_lang):
     return False
 
 
-def parse_po(stream):
+def parse_po(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
     catalog = read_po(stream)
-    return calalog_to_dataset(catalog)
+    return calalog_to_dataset(catalog, from_lang=from_lang, to_lang=to_lang)
 
 
 def parse_xlsx(stream):
-    return tablib.import_set(stream.read(), format='xlsx').dict
+    td = tablib.import_set(stream.read(), format='xlsx')
+    return xlsx_to_dataset(td)

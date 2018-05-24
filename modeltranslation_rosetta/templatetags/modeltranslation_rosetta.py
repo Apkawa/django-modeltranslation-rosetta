@@ -1,7 +1,5 @@
 # coding: utf-8
 from __future__ import unicode_literals
-from urlparse import urlparse, urlunparse
-from django.http import QueryDict
 from django.template import Library
 
 register = Library()

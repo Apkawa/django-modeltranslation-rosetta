@@ -105,7 +105,8 @@ class AdminClassViewMixin(object):
     def get_urls(self):
         urlpatterns = self.get_extra_urls()
         original_views = self._get_original_views()
-        view_classes = self.get_view_classes().items() + original_views.items()
+        view_classes = list(self.get_view_classes().items())
+        view_classes += list(original_views.items())
         for name, view in view_classes:
             pattern = None
             if isinstance(view, (list, tuple)):
@@ -129,8 +130,8 @@ class AdminClassViewMixin(object):
                     pattern = r'^(.+)/%s/$' % name
 
             urlpatterns.append(self.build_url(pattern,
-                view,
-                name='%s_%s_' + name))
+                                              view,
+                                              name='%s_%s_' + name))
 
         return self.get_extra_urls() + urlpatterns
 
@@ -141,8 +142,8 @@ class AdminClassViewMixin(object):
 
 
 class CustomAdmin(six.with_metaclass(forms.MediaDefiningClass,
-    AdminClassViewMixin, PermissionShortcutAdminMixin,
-    ApiJsonContextMixin)):
+                                     AdminClassViewMixin, PermissionShortcutAdminMixin,
+                                     ApiJsonContextMixin)):
     fields = fieldsets = exclude = ()
     date_hierarchy = ordering = None
     list_select_related = save_as = save_on_top = False
