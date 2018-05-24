@@ -148,13 +148,20 @@ def load_same_rows(rows, to_lang=DEFAULT_TO_LANG, from_lang=DEFAULT_FROM_LANG):
                 print(e)
 
 
-def import_row(row, to_lang):
+def import_row(row, to_lang, check_msg_id=False):
     model = row['model']
     obj = model.objects.get(id=row['object_id'])
 
     update_fields = []
     for field in row['fields']:
         to_field_name = build_localized_fieldname(field['field'], to_lang)
+        if check_msg_id:
+            from_field_name = build_localized_fieldname(field['field'], field['from_lang'])
+            obj_msg_id = normalize_text(getattr(obj, from_field_name))
+            msg_id = normalize_text(field[field['from_lang']])
+            if obj_msg_id != msg_id:
+                raise ValueError("msg_id changed!")
+            
         msg_str = normalize_text(field[to_lang]).strip()
         if msg_str and normalize_text(getattr(obj, to_field_name)) != msg_str:
             update_fields.append(to_field_name)
@@ -171,6 +178,6 @@ def parse_po(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
     return calalog_to_dataset(catalog, from_lang=from_lang, to_lang=to_lang)
 
 
-def parse_xlsx(stream):
+def parse_xlsx(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
     td = tablib.import_set(stream.read(), format='xlsx')
     return xlsx_to_dataset(td)
