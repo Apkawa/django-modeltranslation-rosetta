@@ -6,9 +6,23 @@
 {% block content %}
     <form action="?{{ request.GET.q }}" method="get">
         <div>
-            {{ filter_form }}
-            <input type="submit" value="Filter" class="default">
-            <button name="_export" value="po" class="default">Export PO</button>
+            <table>
+                {{ filter_form.as_table }}
+                <tr>
+                    <td>
+                    </td>
+                    <td>
+                        <input type="submit" value="Filter" class="default">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <button name="_export" value="po" class="default">Export .PO</button>
+                        <button name="_export" value="xlsx" class="default">Export .XLSX</button>
+                    </td>
+                </tr>
+
+            </table>
         </div>
     </form>
     <form action="" method="post" enctype="multipart/form-data">
@@ -30,9 +44,9 @@
             <thead>
             <tr>
                 <th>{{ _('Label') }}</th>
-                <th>ru</th>
+                <th>{{ form.from_lang }}</th>
                 <th></th>
-                <th>en</th>
+                <th>{{ form.to_lang }}</th>
             </tr>
             </thead>
             <tbody>

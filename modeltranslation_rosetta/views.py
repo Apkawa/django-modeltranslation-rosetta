@@ -1,31 +1,24 @@
 # coding: utf-8
 from __future__ import unicode_literals
-from io import BytesIO
 
-from django.conf import settings
 from django.contrib import messages
 from django.db.transaction import atomic
 from django.forms.models import modelform_factory, modelformset_factory
-from functools import partial, wraps
-
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.timezone import localtime
-from django.views.generic.list import ListView, MultipleObjectMixin
+from django.views.generic.list import MultipleObjectMixin
 
-from modeltranslation_rosetta.import_translation import load_translation, group_dataset, load_same_rows
+from modeltranslation_rosetta.import_translation import load_translation, group_dataset, \
+    load_same_rows
 from .admin_views import AdminTemplateView, AdminFormView
-
+from .export_translation import export_po, collect_translations, get_opts_from_model, export_xlsx
+from .filter import FilterForm
+from .forms import FieldForm, FieldFormSet, ImportTranslationForm, ExportTranslationForm
+from .settings import DEFAULT_FROM_LANG, DEFAULT_TO_LANG
+from .templates import get_template
 from .utils import get_models, get_model
 from .utils.response import FileResponse
-from .templates import get_template
-
-from .forms import FieldForm, FieldFormSet, ImportForm
-
-from .filter import FilterForm
-from .export_translation import export_po, collect_translations, get_opts_from_model
-
-from .settings import DEFAULT_FROM_LANG, DEFAULT_TO_LANG
 
 
 class ListModelView(AdminTemplateView):
@@ -34,38 +27,56 @@ class ListModelView(AdminTemplateView):
     def get_context_data(self, **kwargs):
         context = super(ListModelView, self).get_context_data(**kwargs)
         context['translated_models'] = get_models()
-        context['import_form'] = ImportForm()
+        export_form_data = None
+        if self.request.method == 'POST':
+            export_form_data = self.request.POST
+
+        context['export_form'] = ExportTranslationForm(data=export_form_data)
+        context['import_form'] = ImportTranslationForm()
         return context
 
-    def get_filename(self, includes=None):
+    def get_filename(self, file_format, includes=None):
         now = localtime(timezone.now())
         if includes:
             includes = " ".join(includes)
         else:
             includes = 'All models'
 
-        return '{includes}_{now:%Y-%m-%d %H:%M}.po'.format(
-            includes=includes,
-            now=now)
+        return f'{includes}_{now:%Y-%m-%d %H:%M}.{file_format}'
 
     def post(self, request, *args, **kwargs):
-        if request.GET.get('_export') == 'po':
+        if request.GET.get('_export'):
             # TODO select lang
-            form_data = {}
+            form = ExportTranslationForm(request.POST)
+            if not form.is_valid():
+                context = self.get_context_data(**kwargs)
+                return self.render_to_response(context)
 
-            from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
-            to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
-            includes = request.POST.getlist('include') or None
+            form_data = form.cleaned_data
+            from_lang = form_data['from_lang']
+            to_lang = form_data['to_lang']
+            file_format = form_data['format']
+            includes = form_data['translation_models']
+
             translations = collect_translations(
                 from_lang=from_lang,
                 to_lang=to_lang,
                 includes=includes,
             )
-            stream = export_po(
-                to_lang=to_lang,
-                translations=translations
-            )
-            response = FileResponse(stream.read(), self.get_filename(includes))
+            if file_format == 'po':
+                stream = export_po(
+                    to_lang=to_lang,
+                    translations=translations
+                )
+            elif file_format == 'xlsx':
+                stream = export_xlsx(
+                    to_lang=to_lang,
+                    translations=translations
+                )
+            else:
+                raise NotImplementedError("Incorrect format")
+
+            response = FileResponse(stream.read(), self.get_filename(file_format, includes))
             return response
 
         return redirect('.')
@@ -90,7 +101,7 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         return self.get_model_info()['model']
 
     def filter_queryset(self, queryset):
-        self.filter_form = FilterForm(queryset, data=self.request.GET)
+        self.filter_form = FilterForm(queryset, data=self.request.GET or None)
         return self.filter_form.qs
 
     def get_queryset(self):
@@ -106,17 +117,29 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         form_class = self.get_form_class()
 
         ModelFormSet = modelformset_factory(self.get_model(),
-            form=form_class,
-            formset=FieldFormSet,
-            extra=0,
-            can_delete=False,
-            can_order=False
-        )
-        paginator, page, queryset, is_paginated = self.paginate_queryset(queryset=queryset, page_size=self.paginate_by)
-        queryset = self.get_model().objects.filter(id__in=list(queryset.values_list('id', flat=True)))
+                                            form=form_class,
+                                            formset=FieldFormSet,
+                                            extra=0,
+                                            can_delete=False,
+                                            can_order=False
+                                            )
+        paginator, page, queryset, is_paginated = self.paginate_queryset(queryset=queryset,
+                                                                         page_size=self.paginate_by)
+        queryset = self.get_model().objects.filter(
+            id__in=list(queryset.values_list('id', flat=True)))
+        fields = None
+        from_lang = DEFAULT_FROM_LANG
+        to_lang = DEFAULT_TO_LANG
+        if self.filter_form.is_valid():
+            data = self.filter_form.cleaned_data
+            fields = data.get('fields')
+            from_lang = data['from_lang']
+            to_lang = data['from_lang']
         return ModelFormSet(
             queryset=queryset,
-            fields=self.filter_form.cleaned_data.get('fields'),
+            fields=fields,
+            from_lang=from_lang,
+            to_lang=to_lang,
             **form_kw)
 
     def get_context_data(self, **kwargs):
@@ -133,45 +156,59 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         ]
         now = localtime(timezone.now())
 
-        return '{name}_{now:%Y-%m-%d %H:%M}.po'.format(
-            name="_".join(filter(None, parts)),
-            now=now)
+        name = "_".join(filter(None, parts))
+        file_format = self.request.GET.get('_export')
 
-    def get(self, request, *args, **kwargs):
-        response = super(EditTranslationView, self).get(*args, **kwargs)
-        if request.GET.get('_export') == 'po':
-            form_data = self.filter_form.cleaned_data
+        return f'{name}_{now:%Y-%m-%d %H:%M}.{file_format}'
 
-            # TODO add into filter form
-            from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
-            to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
+    def get_export(self, request, *args, **kwargs):
+        file_format = request.GET.get('_export')
 
-            includes = None
+        form_data = self.filter_form.cleaned_data
 
-            fields = form_data.get('fields')
-            if fields:
-                opts = get_opts_from_model(self.object_list.model)
-                includes = ['.'.join([opts['model_key'], f]) for f in fields]
+        from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
+        to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
 
-            translations = collect_translations(
-                from_lang=from_lang,
-                to_lang=to_lang,
-                translate_status=form_data['translate_status'],
-                queryset=self.get_queryset(),
-                includes=includes,
-            )
+        includes = None
+
+        fields = form_data.get('fields')
+        if fields:
+            opts = get_opts_from_model(self.object_list.model)
+            includes = ['.'.join([opts['model_key'], f]) for f in fields]
+
+        translations = collect_translations(
+            from_lang=from_lang,
+            to_lang=to_lang,
+            translate_status=form_data['translate_status'],
+            queryset=self.get_queryset(),
+            includes=includes,
+        )
+        if file_format == 'po':
             stream = export_po(
+                from_lang=from_lang,
                 to_lang=to_lang,
                 translations=translations,
                 queryset=self.object_list
             )
-            response = FileResponse(stream.read(), self.get_filename())
-            return response
+        elif file_format == 'xlsx':
+            stream = export_xlsx(translations=translations,
+                                 from_lang=from_lang,
+                                 to_lang=to_lang,
+                                 queryset=self.object_list)
+        else:
+            raise NotImplementedError("Unknown format")
+        response = FileResponse(stream.read(), self.get_filename())
+        return response
+
+    def get(self, request, *args, **kwargs):
+        response = super(EditTranslationView, self).get(*args, **kwargs)
+        if request.GET.get('_export'):
+            return self.get_export(request, *args, **kwargs)
         return response
 
 
-class ImportPOView(AdminFormView):
-    form_class = ImportForm
+class ImportTranslationView(AdminFormView):
+    form_class = ImportTranslationForm
     template_name = 'modeltranslation_rosetta/default/import.html'
 
     @atomic
@@ -182,7 +219,7 @@ class ImportPOView(AdminFormView):
         from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
         to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
 
-        flatten_dataset = form_data['file']
+        flatten_dataset = form_data['dataset']
         result = load_translation(
             group_dataset(flatten_dataset),
             to_lang=to_lang)

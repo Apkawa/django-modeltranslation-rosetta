@@ -5,7 +5,7 @@ from django.utils.translation import ugettext as _
 from django.contrib import admin
 
 from .custom_admin import CustomAdmin
-from .views import ListModelView, EditTranslationView, ImportPOView
+from .views import ListModelView, EditTranslationView, ImportTranslationView
 
 
 class TranslationAdmin(CustomAdmin):
@@ -19,7 +19,7 @@ class TranslationAdmin(CustomAdmin):
 
     view_classes = {
         'import_trans': (
-            r'^import_trans/$', ImportPOView
+            r'^import_trans/$', ImportTranslationView
         )
     }
 

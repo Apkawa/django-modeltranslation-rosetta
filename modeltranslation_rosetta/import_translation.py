@@ -155,13 +155,15 @@ def import_row(row, to_lang, check_msg_id=False):
     update_fields = []
     for field in row['fields']:
         to_field_name = build_localized_fieldname(field['field'], to_lang)
+        msg_id = normalize_text(field[field['from_lang']])
         if check_msg_id:
             from_field_name = build_localized_fieldname(field['field'], field['from_lang'])
             obj_msg_id = normalize_text(getattr(obj, from_field_name))
-            msg_id = normalize_text(field[field['from_lang']])
             if obj_msg_id != msg_id:
                 raise ValueError("msg_id changed!")
-            
+        if not msg_id:
+            raise ValueError("msg_id is empty!")
+
         msg_str = normalize_text(field[to_lang]).strip()
         if msg_str and normalize_text(getattr(obj, to_field_name)) != msg_str:
             update_fields.append(to_field_name)

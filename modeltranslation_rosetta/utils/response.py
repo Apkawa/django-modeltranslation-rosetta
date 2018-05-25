@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from django.http import HttpResponse
 
-from django.utils.encoding import smart_str
+from django.utils.encoding import smart_str, smart_bytes
 
 
 class FileResponse(HttpResponse):
@@ -15,12 +15,12 @@ class FileResponse(HttpResponse):
     """
 
     def __init__(self, file_content, file_name, download=True, content_type=None, *args, **kwargs):
-        disposition = b'filename="{}"'.format(smart_str(file_name))
+        disposition = 'filename="{}"'.format(smart_str(file_name))
         if download:
-            disposition = b'attachment; ' + disposition
+            disposition = 'attachment; ' + disposition
 
         headers = {
-            'Content-Disposition': disposition,
+            'Content-Disposition': smart_bytes(disposition),
             'Content-Length': len(file_content),
         }
 

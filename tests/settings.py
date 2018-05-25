@@ -59,7 +59,7 @@ MIDDLEWARE_CLASSES = (
 gettext = lambda s: s
 LANGUAGES = (
     ('en', gettext('English')),
-    ('ru', gettext('German')),
+    ('de', gettext('German')),
 )
 
 # This is only needed for the 1.4.X test environment

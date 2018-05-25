@@ -5,6 +5,7 @@ from django import forms
 from django.conf import settings
 from django.db.models import Q
 
+from modeltranslation_rosetta.settings import LANGUAGES, DEFAULT_FROM_LANG, DEFAULT_TO_LANG
 from .utils import get_model, build_model_name
 from modeltranslation.utils import build_localized_fieldname
 from .export_translation import TRANSLATED, UNTRANSLATED, filter_queryset, get_opts_from_model
@@ -20,15 +21,20 @@ class FilterForm(forms.Form):
         (TRANSLATED, 'Translated'),
     )
 
-    translate_status = forms.ChoiceField(label='Translate status',
+    translate_status = forms.ChoiceField(
+        label='Translate status',
         choices=TRANSLATE_STATUS,
         required=False,
     )
 
-    fields = forms.MultipleChoiceField(label='Fields',
+    fields = forms.MultipleChoiceField(
+        label='Fields',
         choices=(),
-        required=False
+        required=False,
+        widget=forms.CheckboxSelectMultiple
     )
+    from_lang = forms.ChoiceField(choices=LANGUAGES, initial=DEFAULT_FROM_LANG, required=False)
+    to_lang = forms.ChoiceField(choices=LANGUAGES, initial=DEFAULT_TO_LANG, required=False)
 
     search = forms.CharField(label='Search', required=False)
 
@@ -54,6 +60,14 @@ class FilterForm(forms.Form):
             q |= Q(**{f: search_str})
         return q
 
+    def clean(self):
+        data = self.cleaned_data
+        if data['from_lang'] == data['to_lang']:
+            self.add_error('from_lang', "Lang must be not equal")
+            self.add_error('to_lang', "Lang must be not equal")
+            return
+        return data
+
     @property
     def qs(self):
         qs = filter_queryset(self.queryset, get_opts_from_model(self.queryset.model))
@@ -64,12 +78,13 @@ class FilterForm(forms.Form):
                 return qs
 
             translate_status = data.get('translate_status')
+            from_lang = data['from_lang']
+            to_lang = data['to_lang']
 
             base_fields = data.get('fields') or self.model_info['opts'].fields.keys()
 
             fields = [build_localized_fieldname(f, lang)
-                      for f in base_fields for lang, desc in
-                      settings.LANGUAGES]
+                      for f in base_fields for lang in [from_lang, to_lang]]
 
             q_filter = Q()
             if translate_status:
