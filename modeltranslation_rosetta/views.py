@@ -149,10 +149,15 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
 
     def get_filename(self):
         model_key = self.get_model_info()['model_key']
+        cleaned_data = self.filter_form.cleaned_data
+        from_lang = cleaned_data.get('from_lang') or DEFAULT_FROM_LANG
+        to_lang = cleaned_data.get('to_lang') or DEFAULT_TO_LANG
         parts = [
             model_key,
-            " ".join(self.filter_form.cleaned_data.get('fields') or []),
-            self.filter_form.cleaned_data.get('search')
+            " ".join(cleaned_data.get('fields') or []),
+            cleaned_data.get('search'),
+            from_lang,
+            to_lang,
         ]
         now = localtime(timezone.now())
 
