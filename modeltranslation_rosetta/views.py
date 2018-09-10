@@ -8,6 +8,7 @@ from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.timezone import localtime
 from django.views.generic.list import MultipleObjectMixin
+from modeltranslation.translator import translator
 
 from modeltranslation_rosetta.import_translation import load_translation, group_dataset, \
     load_same_rows
@@ -101,8 +102,16 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         return self.get_model_info()['model']
 
     def filter_queryset(self, queryset):
+        # TODO Migrate to FilterSet
         self.filter_form = FilterForm(queryset, data=self.request.GET or None)
-        return self.filter_form.qs
+        queryset = self.filter_form.qs
+        filter_class = self.get_extra_filter_class()
+        self.extra_filter_form = None
+        if filter_class:
+            _filter = filter_class(self.request.GET, queryset=queryset, prefix='extra_filter')
+            self.extra_filter_form = _filter.form
+            queryset = _filter.qs
+        return queryset
 
     def get_queryset(self):
         return self.get_model().objects.filter()
@@ -110,21 +119,28 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
     def get_form_class(self):
         return modelform_factory(self.get_model(), form=self.form_class, fields=[])
 
+    def get_translation_options(self):
+        return translator.get_options_for_model(self.get_model())
+
+    def get_extra_filter_class(self):
+        trans_opts = self.get_translation_options()
+        filter_class = getattr(trans_opts, 'filter_class', None)
+        return filter_class
+
     def get_form(self, form_class=None):
         self.object_list = queryset = self.filter_queryset(self.get_queryset())
 
         form_kw = self.get_form_kwargs()
         form_class = self.get_form_class()
-
         ModelFormSet = modelformset_factory(self.get_model(),
-                                            form=form_class,
-                                            formset=FieldFormSet,
-                                            extra=0,
-                                            can_delete=False,
-                                            can_order=False
-                                            )
+            form=form_class,
+            formset=FieldFormSet,
+            extra=0,
+            can_delete=False,
+            can_order=False
+        )
         paginator, page, queryset, is_paginated = self.paginate_queryset(queryset=queryset,
-                                                                         page_size=self.paginate_by)
+            page_size=self.paginate_by)
         queryset = self.get_model().objects.filter(
             id__in=list(queryset.values_list('id', flat=True)))
         fields = None
@@ -145,6 +161,7 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
     def get_context_data(self, **kwargs):
         context = super(EditTranslationView, self).get_context_data(**kwargs)
         context['filter_form'] = self.filter_form
+        context['extra_filter_form'] = self.extra_filter_form
         return context
 
     def get_filename(self):
@@ -197,9 +214,9 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
             )
         elif file_format == 'xlsx':
             stream = export_xlsx(translations=translations,
-                                 from_lang=from_lang,
-                                 to_lang=to_lang,
-                                 queryset=self.object_list)
+                from_lang=from_lang,
+                to_lang=to_lang,
+                queryset=self.object_list)
         else:
             raise NotImplementedError("Unknown format")
         response = FileResponse(stream.read(), self.get_filename())
