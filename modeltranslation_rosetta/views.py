@@ -150,7 +150,7 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
             data = self.filter_form.cleaned_data
             fields = data.get('fields')
             from_lang = data['from_lang']
-            to_lang = data['from_lang']
+            to_lang = data['to_lang']
         return ModelFormSet(
             queryset=queryset,
             fields=fields,
