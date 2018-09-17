@@ -92,7 +92,7 @@ class FilterForm(forms.Form):
                     if translate_status == UNTRANSLATED:
                         q_filter |= (Q(**{f + '__isnull': True}) | Q(**{f: ''}))
                     else:
-                        q_filter &= (Q(**{f + '__isnull': False}) & ~Q(**{f: ''}))
+                        q_filter |= (Q(**{f + '__isnull': False}) & ~Q(**{f: ''}))
             q_filter &= self.get_search_query()
             return qs.filter(q_filter)
         return qs
