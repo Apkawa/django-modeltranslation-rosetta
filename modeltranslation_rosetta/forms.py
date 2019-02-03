@@ -119,7 +119,6 @@ class FieldFormSet(forms.BaseModelFormSet):
         kwargs['to_lang'] = self.to_lang
         return kwargs
 
-
     def _construct_form(self, i, **kwargs):
         return super(FieldFormSet, self)._construct_form(i, **kwargs)
 

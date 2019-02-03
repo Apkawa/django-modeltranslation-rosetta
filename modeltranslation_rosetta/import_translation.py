@@ -1,6 +1,5 @@
 # coding: utf-8
 from __future__ import print_function
-from __future__ import print_function
 from __future__ import unicode_literals
 
 import tablib
@@ -118,19 +117,19 @@ def load_same_rows(rows, to_lang=DEFAULT_TO_LANG, from_lang=DEFAULT_FROM_LANG):
     :param from_lang:
     :return:
     """
+    stat = dict.fromkeys(['update', 'skip', 'fail', 'total'], 0)
     for r in rows:
-
         from_name = build_localized_fieldname(r['field'], from_lang)
         to_name = build_localized_fieldname(r['field'], to_lang)
 
         model = r['model']
-
-        msg_id = r['from_lang'].strip()
-        msg_str = normalize_text(r['to_lang']).strip()
+        msg_id = r[from_lang].strip()
+        msg_str = normalize_text(r[to_lang]).strip()
 
         objects = model.objects.filter(**{from_name: msg_id})
 
         for obj in objects:
+            stat['total'] += 1
             update_fields = []
             if (msg_str
                     and normalize_text(getattr(obj, from_name)) == msg_id
@@ -139,13 +138,17 @@ def load_same_rows(rows, to_lang=DEFAULT_TO_LANG, from_lang=DEFAULT_FROM_LANG):
                 update_fields.append(to_name)
                 setattr(obj, to_name, msg_str)
             if not update_fields:
+                stat['skip'] += 1
                 continue
-            print("SAVE", obj, from_name, msg_id)
+            print("SAVE", obj, from_name, msg_id, msg_str)
+            stat['update'] += 1
             try:
                 obj.save(update_fields=update_fields)
             except Exception as e:
                 print(r['Model'], r['object_id'])
                 print(e)
+                stat['fail'] += 1
+    return stat
 
 
 def import_row(row, to_lang, check_msg_id=False):
