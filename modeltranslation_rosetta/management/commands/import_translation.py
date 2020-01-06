@@ -6,10 +6,9 @@ from __future__ import unicode_literals
 import argparse
 import sys
 
-import os
 from django.conf import settings
-from django.db import transaction
 from django.core.management.base import BaseCommand
+from django.db import transaction
 
 from ...import_translation import (
     parse_po, parse_xlsx,

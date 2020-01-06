@@ -59,16 +59,14 @@ def has_include(model_opts, includes):
     _include = False
     for i in includes:
         _include |= i['app_label'] == app_label and i['model'] is None
-        _include |= (
-            i['app_label'] == app_label
-            and i['model'] == model_name
-            and i['field'] is None
-        )
+        _include |= (i['app_label'] == app_label
+                     and i['model'] == model_name
+                     and i['field'] is None)
         for f, tr_f in fields:
             if (i['app_label'] == app_label
-                and i['model'] == model_name
-                and i['field']
-                and i['field'] != f):
+                    and i['model'] == model_name
+                    and i['field']
+                    and i['field'] != f):
                 del fields[f]
 
     return _include and fields

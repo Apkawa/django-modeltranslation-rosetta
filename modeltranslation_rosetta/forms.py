@@ -5,13 +5,12 @@ from itertools import chain
 
 from django import forms
 from django.forms.formsets import TOTAL_FORM_COUNT
-
-from django.forms.models import modelform_factory, formset_factory, fields_for_model
+from django.forms.models import fields_for_model
 from django.utils.translation import ungettext
 
 from modeltranslation_rosetta.settings import DEFAULT_FROM_LANG, DEFAULT_TO_LANG, LANGUAGES
-from .utils import build_localized_fieldname
 from .import_translation import parse_po, parse_xlsx
+from .utils import build_localized_fieldname
 from .utils import get_model, build_model_name, get_models
 
 
@@ -43,16 +42,16 @@ class ImportTranslationForm(forms.Form):
                 dataset = parse_po(_file,
                                    from_lang=data['from_lang'],
                                    to_lang=data['to_lang'])
-            except:
-                self.add_error('file', "Invalid po file")
+            except Exception as e:
+                self.add_error('file', "Invalid po file: %s" % e)
                 return
 
         elif _file.name.lower().endswith('.xlsx'):
             file_format = 'xlsx'
             try:
                 dataset = parse_xlsx(_file)
-            except:
-                self.add_error('file', "Invalid xlsx file")
+            except Exception as e:
+                self.add_error('file', "Invalid xlsx file: %s" % e)
                 return
         else:
             self.add_error('file', "Invalid file extension. Must be .po or .xlsx")
@@ -164,20 +163,22 @@ class FieldFormSet(forms.BaseModelFormSet):
         for form in self.get_changed_forms():
             self._errors.append(form.errors)
         try:
-            if (self.validate_max and
-                self.total_form_count() - len(self.deleted_forms) > self.max_num) or \
-                    self.management_form.cleaned_data[TOTAL_FORM_COUNT] > self.absolute_max:
-                raise forms.ValidationError(ungettext(
-                    "Please submit %d or fewer forms.",
-                    "Please submit %d or fewer forms.", self.max_num) % self.max_num,
-                                            code='too_many_forms',
-                                            )
-            if (self.validate_min and
-                    self.total_form_count() - len(self.deleted_forms) < self.min_num):
-                raise forms.ValidationError(ungettext(
-                    "Please submit %d or more forms.",
-                    "Please submit %d or more forms.", self.min_num) % self.min_num,
-                                            code='too_few_forms')
+            if (
+                    (self.validate_max
+                     and self.total_form_count() - len(self.deleted_forms) > self.max_num)
+                    or self.management_form.cleaned_data[TOTAL_FORM_COUNT] > self.absolute_max):
+                raise forms.ValidationError(
+                    ungettext("Please submit %d or fewer forms.",
+                              "Please submit %d or fewer forms.", self.max_num
+                              ) % self.max_num,
+                    code='too_many_forms',
+                )
+            if (self.validate_min
+                    and self.total_form_count() - len(self.deleted_forms) < self.min_num):
+                raise forms.ValidationError(
+                    ungettext("Please submit %d or more forms.",
+                              "Please submit %d or more forms.", self.min_num) % self.min_num,
+                    code='too_few_forms')
             # Give self.clean() a chance to do cross-form validation.
             self.clean()
         except forms.ValidationError as e:

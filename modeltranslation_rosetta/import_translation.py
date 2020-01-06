@@ -32,6 +32,7 @@ def group_dataset(dataset):
     group = {}
     key = None
     for row in sorted(dataset, key=lambda r: (r['model_key'], r['object_id'])):
+        row = dict(row)
         cur_key = (row['model_key'], row['object_id'])
         if key != cur_key:
             if group:
@@ -40,15 +41,21 @@ def group_dataset(dataset):
             key = cur_key
             group = row
             group['fields'] = []
-        field = {k: row[k]
-                 for k in ['field', 'from_lang', 'to_lang']
-                 }
+
+        field = {}
+        for k in [
+
+            'field', 'from_lang', 'to_lang',
+            row['from_lang'],
+            row['to_lang'],
+        ]:
+            field[k] = row.pop(k)
         group['fields'].append(field)
     # return last group
     yield group
 
 
-def calalog_to_dataset(catalog, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
+def catalog_to_dataset(catalog, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
     model_map = build_model_map()
     for m in catalog:
         if not m.id:
@@ -133,8 +140,7 @@ def load_same_rows(rows, to_lang=DEFAULT_TO_LANG, from_lang=DEFAULT_FROM_LANG):
             update_fields = []
             if (msg_str
                     and normalize_text(getattr(obj, from_name)) == msg_id
-                    and normalize_text(getattr(obj, to_name)) != msg_str
-            ):
+                    and normalize_text(getattr(obj, to_name)) != msg_str):
                 update_fields.append(to_name)
                 setattr(obj, to_name, msg_str)
             if not update_fields:
@@ -180,7 +186,7 @@ def import_row(row, to_lang, check_msg_id=False):
 
 def parse_po(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
     catalog = read_po(stream)
-    return calalog_to_dataset(catalog, from_lang=from_lang, to_lang=to_lang)
+    return catalog_to_dataset(catalog, from_lang=from_lang, to_lang=to_lang)
 
 
 def parse_xlsx(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):

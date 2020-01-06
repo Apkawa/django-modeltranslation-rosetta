@@ -1,3 +1,0 @@
-tablib
-Babel==2.3.4
-django-modeltranslation

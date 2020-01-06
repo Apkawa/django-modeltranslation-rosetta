@@ -15,21 +15,22 @@ def test_generic_export():
 
 
 def test_generic_import():
-    ArticleFactory()
+    article = ArticleFactory()
     translations = list(collect_queryset_translations(qs=Article.objects.all()))
     stream = export_xlsx(translations=translations)
     dataset = list(parse_xlsx(stream))
-    assert len(dataset)
-    row = dataset[0]
-    assert row == {
-        'model_key': 'tests.article',
-        'field': 'title',
-        'object_id': '1',
-        'app_name': 'tests',
-        'model_name': 'article',
-        'model': Article,
-        'from_lang': 'en',
-        'to_lang': 'ru',
-        'en': 'Paper surface need reflect order.',
-        'ru': None
-    }
+    assert len(dataset) == 2
+    assert list(sorted(dataset, key=lambda r: r['field'], reverse=True)) == [
+        {
+            'model_key': 'tests.article', 'field': 'title', 'object_id': str(article.id),
+            'app_name': 'tests', 'model_name': 'article', 'model': Article,
+            'from_lang': 'en', 'to_lang': 'de', 'en': article.title_en,
+            'de': None
+        },
+        {
+            'model_key': 'tests.article', 'field': 'body', 'object_id': str(article.id),
+            'app_name': 'tests', 'model_name': 'article', 'model': Article,
+            'from_lang': 'en', 'to_lang': 'de',
+            'en': article.body_en,
+            'de': None
+        }]

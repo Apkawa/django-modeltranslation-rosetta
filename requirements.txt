@@ -1,7 +1,0 @@
--r package_requirements.txt
--r test_requirements.txt
-
-django>=1.8,<2.0
-django-extensions
-pypandoc
-ipython

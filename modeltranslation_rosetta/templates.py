@@ -5,7 +5,8 @@ import posixpath
 
 from django.conf import settings
 
-TEMPLATE_PREFIX = getattr(settings, 'MODELTRANSLATION_ROSETTA_TEMPLATE_PREFIX', 'modeltranslation_rosetta/default/')
+TEMPLATE_PREFIX = getattr(settings, 'MODELTRANSLATION_ROSETTA_TEMPLATE_PREFIX',
+                          'modeltranslation_rosetta/default/')
 
 
 def get_template(name):
