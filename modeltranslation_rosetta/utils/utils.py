@@ -55,6 +55,7 @@ def get_opts_from_model(model, fields=None):
         app_label=meta.app_label,
         model_name=meta.model_name,
         model_key=model_key,
+        opts=opts,
     )
     return model_opts
 

@@ -24,6 +24,15 @@ UNTRANSLATED = 'U'
 TRANSLATED = 'T'
 
 
+def build_comment(instance):
+    meta = instance._meta
+    return '{app_title}->{model_title}:{obj} [{obj.id}]'.format(
+        app_title=meta.app_config.verbose_name,
+        model_title=meta.verbose_name,
+        obj=instance
+    )
+
+
 def allow_export(msg_str, msg_id, translate_status=None):
     if not msg_id:
         return False
@@ -50,6 +59,7 @@ def filter_queryset(queryset, model_opts, export_filters=EXPORT_FILTERS):
 def collect_queryset_translations(qs, fields=None):
     model = qs.model
     model_opts = get_opts_from_model(model)
+    trans_opts = model_opts['opts']
 
     fields = set(map(lambda f: f.split('.')[-1], fields or []))
 
@@ -61,6 +71,15 @@ def collect_queryset_translations(qs, fields=None):
     for o in qs.distinct():
         for f, trans_f in trans_fields.items():
             translated_data = {lang: normalize_text(getattr(o, tf)) for lang, tf in trans_f.items()}
+            context = None
+            if hasattr(trans_opts, 'get_context'):
+                context = trans_opts.get_context(o)
+
+            if hasattr(trans_opts, 'get_comment'):
+                comment = trans_opts.get_comment(o)
+            else:
+                comment = build_comment(o)
+
 
             yield dict(
                 model_key=model_opts['model_key'],
@@ -69,7 +88,9 @@ def collect_queryset_translations(qs, fields=None):
                 field=f,
                 model=model,
                 obj=o,
-                translated_data=translated_data
+                translated_data=translated_data,
+                context=context,
+                comment=comment
             )
 
 
@@ -80,7 +101,10 @@ def collect_model_translations(model_opts, fields=None):
     :return: iterator
     """
     model = model_opts['model']
-    qs = filter_queryset(model.objects, model_opts)
+    qs = model.objects
+    if hasattr(model_opts['opts'], 'get_queryset'):
+        qs = model_opts['opts'].get_queryset()
+    qs = filter_queryset(qs, model_opts)
     return collect_queryset_translations(qs, fields)
 
 
@@ -140,15 +164,10 @@ def export_po(translations,
         msg_id = tr['translated_data'][from_lang]
         msg_str = tr['translated_data'][to_lang]
 
-        model = tr['model']
-        obj = tr['obj']
-        comments = ('{app_title}->{model_title}:{obj} [{obj.id}]'.format(
-            app_title=model._meta.app_config.verbose_name,
-            model_title=model._meta.verbose_name,
-            obj=obj
-        ),)
+        context = tr['context']
+        comments = [tr['comment']]
         catalog.add(msg_id, msg_str, locations=(msg_location,),
-                    auto_comments=comments)
+                    auto_comments=comments, context=context)
 
     if queryset:
         """
@@ -169,7 +188,7 @@ def export_po(translations,
                 locations.add(".".join(spl))
 
             if locations & qs_locations:
-                kw = {k: getattr(message, k) for k in ['auto_comments', 'locations']}
+                kw = {k: getattr(message, k) for k in ['auto_comments', 'locations', 'context']}
 
                 new_catalog.add(
                     message.id,
@@ -225,7 +244,8 @@ def export_xlsx(translations,
         locations = '\n'.join([path for path, _ in m.locations])
         meta_cell = WriteOnlyCell(ws, value=locations)
         max_height_lines = max(
-            [len(c.value.splitlines()) for c in [comment_cell, from_lang_cell, to_lang_cell] if c.value])
+            [len(c.value.splitlines()) for c in [comment_cell, from_lang_cell, to_lang_cell] if
+             c.value])
         ws.append([comment_cell, meta_cell, from_lang_cell, to_lang_cell])
         ws.row_dimensions[i].height = 20 * max_height_lines
 

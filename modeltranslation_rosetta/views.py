@@ -5,13 +5,15 @@ from django.contrib import messages
 from django.db.transaction import atomic
 from django.forms.models import modelform_factory, modelformset_factory
 from django.shortcuts import redirect
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.timezone import localtime
 from django.views.generic.list import MultipleObjectMixin
 from modeltranslation.translator import translator
 
-from modeltranslation_rosetta.import_translation import load_translation, group_dataset, \
+from modeltranslation_rosetta.import_translation import (
+    load_translation, group_dataset,
     load_same_rows
+)
 from modeltranslation_rosetta.utils.signals import DisconnectSignal
 from .admin_views import AdminTemplateView, AdminFormView
 from .export_translation import export_po, collect_translations, get_opts_from_model, export_xlsx
@@ -199,27 +201,28 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
             opts = get_opts_from_model(self.object_list.model)
             includes = ['.'.join([opts['model_key'], f]) for f in fields]
 
-        translations = collect_translations(
-            from_lang=from_lang,
-            to_lang=to_lang,
-            translate_status=form_data['translate_status'],
-            queryset=self.get_queryset(),
-            includes=includes,
-        )
-        if file_format == 'po':
-            stream = export_po(
+        with translation.override(from_lang):
+            translations = collect_translations(
                 from_lang=from_lang,
                 to_lang=to_lang,
-                translations=translations,
-                queryset=self.object_list
+                translate_status=form_data['translate_status'],
+                queryset=self.get_queryset(),
+                includes=includes,
             )
-        elif file_format == 'xlsx':
-            stream = export_xlsx(translations=translations,
-                                 from_lang=from_lang,
-                                 to_lang=to_lang,
-                                 queryset=self.object_list)
-        else:
-            raise NotImplementedError("Unknown format")
+            if file_format == 'po':
+                stream = export_po(
+                    from_lang=from_lang,
+                    to_lang=to_lang,
+                    translations=translations,
+                    queryset=self.object_list
+                )
+            elif file_format == 'xlsx':
+                stream = export_xlsx(translations=translations,
+                                     from_lang=from_lang,
+                                     to_lang=to_lang,
+                                     queryset=self.object_list)
+            else:
+                raise NotImplementedError("Unknown format")
         response = FileResponse(stream.read(), self.get_filename())
         return response
 
