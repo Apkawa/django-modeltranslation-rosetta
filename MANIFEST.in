@@ -1,5 +1,4 @@
 include README.md
 include LICENSE
-include package_requirements.txt
 recursive-include modeltranslation_rosetta/templates *
 recursive-include modeltranslation_rosetta/static *

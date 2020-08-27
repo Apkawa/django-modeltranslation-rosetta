@@ -1,8 +1,8 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
-from django.utils.translation import ugettext as _
 from django.contrib import admin
+from django.utils.translation import ugettext as _
 
 from .custom_admin import CustomAdmin
 from .views import ListModelView, EditTranslationView, ImportTranslationView

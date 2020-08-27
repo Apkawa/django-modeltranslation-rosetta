@@ -14,6 +14,8 @@ from django.views.generic.base import View
 from .admin_views import AdminTemplateView
 
 
+# TODO replace to django-admin-view
+
 class ApiJsonContextMixin(object):
     def get_json_context(self, request, object_id=None, form_url='', ):
         add = object_id is None
@@ -193,9 +195,10 @@ class CustomAdmin(six.with_metaclass(forms.MediaDefiningClass,
         model._deferred = False
 
         # For 1.10
-        copy_map = {'app_label': 'label',
-                    'verbose_name': 'verbose_name',
-                    }
+        copy_map = {
+            'app_label': 'label',
+            'verbose_name': 'verbose_name',
+        }
 
         model._meta.app_config = Fake()
         for f, to in copy_map.items():

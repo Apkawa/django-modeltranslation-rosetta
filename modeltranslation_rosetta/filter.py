@@ -4,11 +4,11 @@ from __future__ import unicode_literals
 from django import forms
 from django.conf import settings
 from django.db.models import Q
+from modeltranslation.utils import build_localized_fieldname
 
 from modeltranslation_rosetta.settings import LANGUAGES, DEFAULT_FROM_LANG, DEFAULT_TO_LANG
-from .utils import get_model, build_model_name
-from modeltranslation.utils import build_localized_fieldname
 from .export_translation import TRANSLATED, UNTRANSLATED, filter_queryset, get_opts_from_model
+from .utils import get_model, build_model_name
 
 SEARCH_FIELDS = (getattr(settings, 'MODELTRANSLATION_ROSETTA_MODEL_SEARCH_FIELDS', None) or {})
 SEARCH_FIELDS = {k.lower(): o for k, o in SEARCH_FIELDS.items()}

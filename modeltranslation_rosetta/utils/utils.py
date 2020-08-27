@@ -1,11 +1,10 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
-from django.conf import settings
-from django.db.models import Model
-
 from collections import OrderedDict
 
+from django.conf import settings
+from django.db.models import Model
 from modeltranslation.translator import translator
 from modeltranslation.utils import build_localized_fieldname
 
@@ -95,8 +94,8 @@ def has_exclude(model_opts, excludes):
 
         for k, f in enumerate(fields):
             if (i['app_label'] == app_label
-                and i['model'] == model_name
-                and i['field'] == f):
+                    and i['model'] == model_name
+                    and i['field'] == f):
                 del fields[k]
 
     return {
@@ -130,11 +129,9 @@ def has_include(model_opts, includes):
     delete_fields = set()
     for i in includes:
         _include |= i['app_label'] == app_label and i['model'] is None
-        _include |= (
-            i['app_label'] == app_label
-            and i['model'] == model_name
-            and i['field'] is None
-        )
+        _include |= (i['app_label'] == app_label
+                     and i['model'] == model_name
+                     and i['field'] is None)
 
         for k, f in enumerate(fields):
             _include |= bool(
@@ -144,9 +141,9 @@ def has_include(model_opts, includes):
                 and i['field'] == f
             )
             if (i['app_label'] == app_label
-                and i['model'] == model_name
-                and i['field']
-                and i['field'] != f):
+                    and i['model'] == model_name
+                    and i['field']
+                    and i['field'] != f):
                 delete_fields.add(f)
 
     fields = list(set(fields) - delete_fields)

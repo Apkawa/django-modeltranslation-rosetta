@@ -70,8 +70,8 @@ class AdminViewMixin(object):
             verbose_name=self._get_admin_attr('verbose_name'),
             save_as=False,
             save_on_top=False,
-            is_popup=(IS_POPUP_VAR in self.request.POST or
-                      IS_POPUP_VAR in self.request.GET),
+            is_popup=(IS_POPUP_VAR in self.request.POST
+                      or IS_POPUP_VAR in self.request.GET),
             is_popup_var=IS_POPUP_VAR,
 
             content_type_id=get_content_type_for_model(admin.model).pk,
@@ -96,5 +96,6 @@ class AdminViewMixin(object):
         context = super(AdminViewMixin, self).get_context_data(**kwargs)
         context.update(self.get_admin_context())
         if hasattr(self.admin, 'get_extra_context'):
-            context.update(self.admin.get_extra_context(self.request, object_id=context.get('object_id')))
+            context.update(
+                self.admin.get_extra_context(self.request, object_id=context.get('object_id')))
         return context

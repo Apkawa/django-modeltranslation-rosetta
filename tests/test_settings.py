@@ -10,3 +10,8 @@ DATABASES = {
         'NAME': ':memory:',
     }
 }
+
+LANGUAGES = (
+    ('en', gettext('English')),
+    ('de', gettext('German')),
+)

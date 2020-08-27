@@ -2,23 +2,21 @@
 from __future__ import unicode_literals
 
 import shutil
+from io import BytesIO
 from tempfile import NamedTemporaryFile
 
-import tablib
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po, read_po
-from io import BytesIO
 from modeltranslation.translator import translator
 from openpyxl import Workbook
-from openpyxl.cell import WriteOnlyCell, Cell
-from openpyxl.comments import Comment
-from openpyxl.utils import get_column_letter
+from openpyxl.cell import WriteOnlyCell
 from openpyxl.styles import Protection, Alignment
+from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.protection import SheetProtection
 
 from .import_translation import normalize_text
-from .utils import get_cleaned_fields, parse_model, get_opts_from_model
 from .settings import (EXPORT_FILTERS, DEFAULT_TO_LANG, DEFAULT_FROM_LANG)
+from .utils import get_cleaned_fields, parse_model, get_opts_from_model
 
 UNTRANSLATED = 'U'
 TRANSLATED = 'T'
@@ -170,11 +168,9 @@ def export_po(translations,
                     auto_comments=comments, context=context)
 
     if queryset:
-        """
-        Особая уличная магия, 
-        для корректной выгрузки переводов одного объекта, 
-        но он может быть переведен в других объектах
-        """
+        # Особая уличная магия,
+        # для корректной выгрузки переводов одного объекта,
+        # но он может быть переведен в других объектах
         opts = get_opts_from_model(queryset.model)
         qs_locations = {"%s.%s" % (opts['model_key'], pk) for pk in
                         queryset.values_list('pk', flat=True)}

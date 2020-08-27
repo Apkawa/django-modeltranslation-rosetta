@@ -98,7 +98,8 @@
                 {% if page_obj.number == i %}
                     <span class="this-page">{{ i }}</span>
                 {% else %}
-                    <a href="?{% get_params 'page' i %}" {% if forloop.last %}class="end" {% endif %}>{{ i }}</a>
+                    <a href="?{% get_params 'page' i %}"
+                       {% if forloop.last %}class="end" {% endif %}>{{ i }}</a>
                 {% endif %}
             {% endfor %}
         </p>

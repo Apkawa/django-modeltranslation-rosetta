@@ -20,7 +20,8 @@
                         {% for opt in export_form.translation_models %}
                             <li>
                                 <label>
-                                    <input type="checkbox" name="{{ opt.data.name }}" value="{{ opt.data.value }}">
+                                    <input type="checkbox" name="{{ opt.data.name }}"
+                                           value="{{ opt.data.value }}">
                                     <a href="{{ opt.data.value }}">
                                         {{ opt.data.label }}
                                     </a>

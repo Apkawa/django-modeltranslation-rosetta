@@ -95,13 +95,14 @@ class AdminChangeFormView(AdminUpdateView):
 
     def get_admin_context(self, **extra_context):
         context = AdminObjectView.get_admin_context(self, **extra_context)
-        context.update(self.admin.get_extra_context(self.request, object_id=self.object and self.object.id))
+        context.update(
+            self.admin.get_extra_context(self.request, object_id=self.object and self.object.id))
         return context
 
     def get_object(self, queryset=None):
         try:
             return super(AdminChangeFormView, self).get_object(queryset)
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             if not self.is_allow_add:
                 raise Http404("Not found")
 

@@ -142,8 +142,10 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
                                             can_delete=False,
                                             can_order=False
                                             )
-        paginator, page, queryset, is_paginated = self.paginate_queryset(queryset=queryset,
-                                                                         page_size=self.paginate_by)
+        paginator, page, queryset, is_paginated = self.paginate_queryset(
+            queryset=queryset,
+            page_size=self.paginate_by
+        )
         queryset = self.get_model().objects.filter(
             id__in=list(queryset.values_list('id', flat=True)))
         fields = None
@@ -253,6 +255,10 @@ class ImportTranslationView(AdminFormView):
         # TODO customize signal  hook
         with DisconnectSignal():
             messages.add_message(self.request, messages.SUCCESS, result['stat'])
-            result_same_rows = load_same_rows(flatten_dataset, from_lang=from_lang, to_lang=to_lang)
+            result_same_rows = load_same_rows(
+                flatten_dataset,
+                from_lang=from_lang,
+                to_lang=to_lang
+            )
             messages.add_message(self.request, messages.SUCCESS, result_same_rows)
         return redirect('.')
