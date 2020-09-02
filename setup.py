@@ -51,10 +51,12 @@ setup(
     author="Apkawa",
     author_email='apkawa@gmail.com',
     packages=[package for package in find_packages() if package.startswith(app_name)],
+    python_requires='>=3.6, <4',
     install_requires=[
         'six',
         'Django>=1.8,<3.1',
         'tablib',
+        'openpyxl>=2.6.0',
         'Babel==2.3.4',
         'django-modeltranslation',
     ],
