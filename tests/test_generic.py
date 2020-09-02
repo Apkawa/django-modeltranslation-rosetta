@@ -6,7 +6,10 @@ from unittest import TestCase
 
 from babel.messages.pofile import read_po, write_po
 
+from modeltranslation.translator import translator
+
 from modeltranslation_rosetta.export_translation import (
+    build_comment,
     export_po,
     collect_model_translations,
     collect_queryset_translations,
@@ -22,8 +25,10 @@ from .models import Article
 
 
 class GenericTestCase(TestCase):
+    maxDiff = None
     def setUp(self):
         self.article = ArticleFactory()
+        self.opts = translator.get_options_for_model(Article)
 
     def test_collect_models_all(self):
         models = list(collect_models())
@@ -36,7 +41,8 @@ class GenericTestCase(TestCase):
                                      u'title': {'de': 'title_de', 'en': 'title_en'}
                                  },
                                  'model': Article, 'model_name': 'article',
-                                 'model_key': u'tests.article', 'app_label': 'tests'
+                                 'model_key': u'tests.article', 'app_label': 'tests',
+                                 'opts': self.opts,
                              })
 
     def test_collect_translation(self):
@@ -46,7 +52,8 @@ class GenericTestCase(TestCase):
                 u'title': {'de': 'title_de', 'en': 'title_en'}
             },
             'model': Article, 'model_name': 'article',
-            'model_key': u'tests.article', 'app_label': 'tests'
+            'model_key': u'tests.article', 'app_label': 'tests',
+            'opts': self.opts,
         }
         translations = list(collect_model_translations(model_opts))
         self.assert_(translations)
@@ -61,7 +68,9 @@ class GenericTestCase(TestCase):
                                      'model_key': u'tests.article',
                                      'model': Article,
                                      'model_name': 'article',
-                                     'object_id': str(self.article.id)
+                                     'object_id': str(self.article.id),
+                                     'comment': build_comment(self.article),
+                                     'context': None,
                                  }
                                  )
 
@@ -79,7 +88,9 @@ class GenericTestCase(TestCase):
                                      'model_key': u'tests.article',
                                      'model': Article,
                                      'model_name': 'article',
-                                     'object_id': str(self.article.id)
+                                     'object_id': str(self.article.id),
+                                     'comment': build_comment(self.article),
+                                     'context': None,
                                  }
                                  )
 
