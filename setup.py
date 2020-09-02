@@ -54,7 +54,7 @@ setup(
     python_requires='>=3.6, <4',
     install_requires=[
         'six',
-        'Django>=1.8,<3.1',
+        'Django>=1.8,<3.2',
         'tablib',
         'openpyxl>=2.6.0',
         'Babel==2.3.4',
