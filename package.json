@@ -1,9 +1,13 @@
 {
   "scripts": {
-    "watch": "gulp watch:webpack",
-    "build": "gulp build --production"
+    "watch": "webpack --watch",
+    "build": "webpack --mode=production"
   },
   "dependencies": {
-    "gulp-frontend-tools": "^0.2.25"
+  },
+  "devDependencies": {
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
   }
+
 }
