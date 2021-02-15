@@ -102,7 +102,7 @@ class GenericTestCase(TestCase):
 
         message = po_file[self.article.title_en]
         self.assertEqual(message.auto_comments[0],
-                         'Tests->article:{a} [{a.id}]'.format(a=self.article))
+                         'Tests::article:{a} [{a.id}]'.format(a=self.article))
 
         self.assertEqual(message.locations[0][0],
                          'tests.article.title.{a.id}'.format(a=self.article))

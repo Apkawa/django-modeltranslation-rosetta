@@ -11,6 +11,7 @@ from .settings import (
     DEFAULT_TO_LANG,
     DEFAULT_FROM_LANG
 )
+from .utils.xml.parse import XMLParser
 
 
 def normalize_text(text):
@@ -192,3 +193,51 @@ def parse_po(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
 def parse_xlsx(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
     td = tablib.import_set(stream.read(), format='xlsx')
     return xlsx_to_dataset(td)
+
+
+def parse_xml(stream, from_lang=DEFAULT_FROM_LANG, to_lang=DEFAULT_TO_LANG):
+    model_map = build_model_map()
+
+    x = XMLParser()
+    parsed_iter = x.parse(stream, tags=['Object'])
+
+    for d in parsed_iter:
+        d = d['Object']
+        locations = d['@id'].split(';')
+        text_row = {
+            'from_lang': from_lang,
+            'to_lang': to_lang,
+        }
+        is_merged = 'Lang' in d
+
+        for path in locations:
+            fields = []
+            if is_merged:
+                app_name, model_name, field, object_id = path.split('.')
+                lang_map = {l['@code']: l for l in d['Lang']}
+                fields.append({
+                    'field': field,
+                    from_lang: lang_map[from_lang]['#text'],
+                    to_lang: lang_map[to_lang].get('#text')
+                })
+
+            else:
+                app_name, model_name, object_id = path.split('.')
+                for k, v in d.items():
+                    if not k.startswith('@') and '@field' in v:
+                        lang_map = {l['@code']: l for l in v['Lang']}
+                        fields.append({
+                            'field': v['@field'],
+                            from_lang: lang_map[from_lang]['#text'],
+                            to_lang: lang_map[to_lang].get('#text')
+                        })
+
+            model_key = '.'.join([app_name, model_name])
+            for f in fields:
+                row = dict(zip(
+                    ['model_key', 'object_id', 'app_name', 'model_name'],
+                    [model_key, object_id, app_name, model_name]))
+                row['model'] = model_map[model_key]
+                row.update(f)
+                row.update(text_row)
+                yield row

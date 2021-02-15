@@ -7,6 +7,8 @@ from tempfile import NamedTemporaryFile
 
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po, read_po
+from django.utils import timezone
+from django.utils.encoding import smart_bytes
 from modeltranslation.translator import translator
 from openpyxl import Workbook
 from openpyxl.cell import WriteOnlyCell
@@ -17,6 +19,7 @@ from openpyxl.worksheet.protection import SheetProtection
 from .import_translation import normalize_text
 from .settings import (EXPORT_FILTERS, DEFAULT_TO_LANG, DEFAULT_FROM_LANG)
 from .utils import get_cleaned_fields, parse_model, get_opts_from_model
+from .utils.xml.render import XMLRenderer
 
 UNTRANSLATED = 'U'
 TRANSLATED = 'T'
@@ -24,7 +27,7 @@ TRANSLATED = 'T'
 
 def build_comment(instance):
     meta = instance._meta
-    return '{app_title}->{model_title}:{obj} [{obj.id}]'.format(
+    return '{app_title}::{model_title}:{obj} [{obj.id}]'.format(
         app_title=meta.app_config.verbose_name,
         model_title=meta.verbose_name,
         obj=instance
@@ -77,7 +80,6 @@ def collect_queryset_translations(qs, fields=None):
                 comment = trans_opts.get_comment(o)
             else:
                 comment = build_comment(o)
-
 
             yield dict(
                 model_key=model_opts['model_key'],
@@ -255,6 +257,73 @@ def export_xlsx(translations,
         wb.save(tf.name)
 
         shutil.copyfileobj(tf.file, stream)
+
+    stream.flush()
+    stream.seek(0)
+    return stream
+
+
+def export_xml(translations,
+               from_lang=DEFAULT_FROM_LANG,
+               to_lang=DEFAULT_TO_LANG,
+               queryset=None,
+               stream=None,
+               merge_trans=True,
+               ):
+    stream = stream or BytesIO()
+
+    xml_translations = []
+    if merge_trans:
+        po_file_stream = export_po(
+            translations=translations, from_lang=from_lang,
+            to_lang=to_lang, queryset=queryset)
+        catalog = read_po(po_file_stream)
+        for c in catalog:
+            if not c.id:
+                continue
+
+            t = {
+                '@id': ';'.join([c[0] for c in c.locations]),
+                '@comment': ';'.join(c.auto_comments),
+                'lang': [
+                    {'@code': from_lang, '#text': c.id},
+                    {'@code': to_lang, '#text': c.string},
+                ]
+            }
+            if c.context:
+                t['@context'] = c.context
+            xml_translations.append(t)
+    else:
+        objects = {}
+        for tr in translations:
+            if tr['object_id'] not in objects:
+                objects[tr['object_id']] = {
+                    '@id': '{model_key}.{object_id}'.format(**tr),
+                    '@comment': tr['comment'],
+                    'fields': [],
+                }
+                if tr['context']:
+                    objects[tr['object_id']]['@context'] = tr['context']
+
+            objects[tr['object_id']]['fields'].append({
+                tr['field']: {
+                    '@field': tr['field'],
+                    'lang': [
+                        {'@code': from_lang, '#text': tr['translated_data'][from_lang]},
+                        {'@code': to_lang, '#text': tr['translated_data'][to_lang] or ''},
+                    ]
+                }
+            })
+        xml_translations = list(objects.values())
+
+    xml = XMLRenderer()
+    root_attrs = {
+        'created': timezone.now().isoformat()
+    }
+    xml_t = xml.render(xml_translations,
+                       parent_tag_name='object',
+                       root_attrs=root_attrs)
+    stream.write(smart_bytes(xml_t))
 
     stream.flush()
     stream.seek(0)

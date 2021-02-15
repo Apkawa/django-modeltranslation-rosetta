@@ -9,7 +9,7 @@ from django.forms.models import fields_for_model
 from django.utils.translation import ungettext
 
 from modeltranslation_rosetta.settings import DEFAULT_FROM_LANG, DEFAULT_TO_LANG, LANGUAGES
-from .import_translation import parse_po, parse_xlsx
+from .import_translation import parse_po, parse_xlsx, parse_xml
 from .utils import build_localized_fieldname
 from .utils import get_model, build_model_name, get_models
 
@@ -40,8 +40,8 @@ class ImportTranslationForm(forms.Form):
                     return
             try:
                 dataset = parse_po(_file,
-                                   from_lang=data['from_lang'],
-                                   to_lang=data['to_lang'])
+                                   from_lang=from_lang,
+                                   to_lang=to_lang)
             except Exception as e:
                 self.add_error('file', "Invalid po file: %s" % e)
                 return
@@ -53,6 +53,18 @@ class ImportTranslationForm(forms.Form):
             except Exception as e:
                 self.add_error('file', "Invalid xlsx file: %s" % e)
                 return
+        elif _file.name.lower().endswith('.xml'):
+            file_format = 'xml'
+            for f in ['to_lang', 'from_lang']:
+                if not data[f]:
+                    self.add_error(f, "No possible detect, must be define lang")
+                    return
+            try:
+                dataset = parse_xml(_file, from_lang=from_lang, to_lang=to_lang)
+            except Exception as e:
+                self.add_error('file', "Invalid xml file: %s" % e)
+                return
+
         else:
             self.add_error('file', "Invalid file extension. Must be .po or .xlsx")
             return
@@ -86,7 +98,7 @@ class ExportTranslationForm(forms.Form):
         widget=forms.CheckboxSelectMultiple,
         required=False
     )
-    format = forms.ChoiceField(choices=[('po', '.PO file'), ('xlsx', '.XLSX file')])
+    format = forms.ChoiceField(choices=[('po', '.PO file'), ('xlsx', '.XLSX file'), ('xml', '.XML file'), ('xml_merged', '.XML merged')])
     from_lang = forms.ChoiceField(choices=LANGUAGES, initial=DEFAULT_FROM_LANG)
     to_lang = forms.ChoiceField(choices=LANGUAGES, initial=DEFAULT_TO_LANG)
 

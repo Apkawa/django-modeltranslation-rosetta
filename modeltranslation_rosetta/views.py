@@ -16,7 +16,8 @@ from modeltranslation_rosetta.import_translation import (
 )
 from modeltranslation_rosetta.utils.signals import DisconnectSignal
 from .admin_views import AdminTemplateView, AdminFormView
-from .export_translation import export_po, collect_translations, get_opts_from_model, export_xlsx
+from .export_translation import export_po, collect_translations, get_opts_from_model, export_xlsx, \
+    export_xml
 from .filter import FilterForm
 from .forms import FieldForm, FieldFormSet, ImportTranslationForm, ExportTranslationForm
 from .settings import DEFAULT_FROM_LANG, DEFAULT_TO_LANG
@@ -185,6 +186,8 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
 
         name = "_".join(filter(None, parts))
         file_format = self.request.GET.get('_export')
+        if file_format == 'xml_merged':
+            file_format = 'xml'
 
         return f'{name}_{now:%Y-%m-%d %H:%M}.{file_format}'
 
@@ -223,8 +226,15 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
                                      from_lang=from_lang,
                                      to_lang=to_lang,
                                      queryset=self.object_list)
+            elif file_format in ['xml', 'xml_merged']:
+                stream = export_xml(translations=translations,
+                                     from_lang=from_lang,
+                                     to_lang=to_lang,
+                                     queryset=self.object_list,
+                                     merge_trans=file_format == 'xml_merged')
             else:
                 raise NotImplementedError("Unknown format")
+
         response = FileResponse(stream.read(), self.get_filename())
         return response
 

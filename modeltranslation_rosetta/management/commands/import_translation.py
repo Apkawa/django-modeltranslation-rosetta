@@ -14,7 +14,7 @@ from ...import_translation import (
     parse_po, parse_xlsx,
     load_translation,
     load_same_rows,
-    group_dataset
+    group_dataset, parse_xml
 )
 
 FROM_LANG = settings.LANGUAGES[0][0]
@@ -85,6 +85,9 @@ class Command(BaseCommand):
             flatten_dataset = parse_xlsx(filename)
         elif fmt == 'po':
             flatten_dataset = parse_po(filename)
+        elif fmt == 'xml':
+            flatten_dataset = parse_xml(filename)
+
 
         result = load_translation(
             group_dataset(flatten_dataset),
