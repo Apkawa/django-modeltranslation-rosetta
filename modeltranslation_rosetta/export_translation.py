@@ -7,7 +7,7 @@ from tempfile import NamedTemporaryFile
 
 from babel.messages.catalog import Catalog
 from babel.messages.pofile import write_po, read_po
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.encoding import smart_bytes
 from modeltranslation.translator import translator
 from openpyxl import Workbook
@@ -133,14 +133,15 @@ def collect_translations(
         excludes=False,
         queryset=None,
 ):
-    if queryset:
-        translations = collect_queryset_translations(queryset, fields=includes)
-    else:
-        collected_models = collect_models(includes, excludes)
-        translations = (
-            t for model_opts in collected_models
-            for t in collect_model_translations(model_opts)
-        )
+    with translation.override(from_lang):
+        if queryset:
+            translations = collect_queryset_translations(queryset, fields=includes)
+        else:
+            collected_models = collect_models(includes, excludes)
+            translations = (
+                t for model_opts in collected_models
+                for t in collect_model_translations(model_opts)
+            )
     for tr in translations:
         msg_id = tr['translated_data'][from_lang]
         msg_str = tr['translated_data'][to_lang]

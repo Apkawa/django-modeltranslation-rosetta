@@ -118,6 +118,9 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         return queryset
 
     def get_queryset(self):
+        opts = self.get_translation_options()
+        if hasattr(opts, 'get_queryset'):
+            return opts.get_queryset()
         return self.get_model().objects.filter()
 
     def get_form_class(self):
