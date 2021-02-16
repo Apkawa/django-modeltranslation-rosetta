@@ -28,7 +28,7 @@ matrix:
     - env: DJANGO=1.8
     - env: DJANGO=1.11
     - env: TOXENV=qa
-    - env: TOXENV=py37-django-dev
+    - env: TOXENV=py39-django-dev
 
 
 install: pip install tox-travis python-coveralls codecov
