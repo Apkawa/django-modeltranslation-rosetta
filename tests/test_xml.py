@@ -23,14 +23,14 @@ def test_generic_export():
 <root created="{dt.isoformat()}">
   <Objects>
     <Object comment="Tests::article:Article object ({a.id}) [{a.id}]" id="tests.article.{a.id}">
-      <Title field="title">
-        <Lang code="en"><![CDATA[{a.title_en}]]></Lang>
-        <Lang code="de"><![CDATA[]]></Lang>
-      </Title>
       <Body field="body">
         <Lang code="en"><![CDATA[{a.body_en}]]></Lang>
         <Lang code="de"><![CDATA[]]></Lang>
       </Body>
+      <Title field="title">
+        <Lang code="en"><![CDATA[{a.title_en}]]></Lang>
+        <Lang code="de"><![CDATA[]]></Lang>
+      </Title>
     </Object>
   </Objects>
 </root>
@@ -49,12 +49,12 @@ def test_export_merge_trans():
         f"""
 <root created="{dt.isoformat()}">
   <Objects>
-    <Object comment="Tests::article:Article object ({a.id}) [{a.id}]" id="tests.article.title.{a.id}">
-      <Lang code="en"><![CDATA[{a.title_en}]]></Lang>
-      <Lang code="de"><![CDATA[]]></Lang>
-    </Object>
     <Object comment="Tests::article:Article object ({a.id}) [{a.id}]" id="tests.article.body.{a.id}">
       <Lang code="en"><![CDATA[{a.body_en}]]></Lang>
+      <Lang code="de"><![CDATA[]]></Lang>
+    </Object>
+    <Object comment="Tests::article:Article object ({a.id}) [{a.id}]" id="tests.article.title.{a.id}">
+      <Lang code="en"><![CDATA[{a.title_en}]]></Lang>
       <Lang code="de"><![CDATA[]]></Lang>
     </Object>
   </Objects>

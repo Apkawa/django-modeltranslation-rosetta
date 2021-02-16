@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import shutil
+from collections import OrderedDict
 from io import BytesIO
 from tempfile import NamedTemporaryFile
 
@@ -64,10 +65,10 @@ def collect_queryset_translations(qs, fields=None):
 
     fields = set(map(lambda f: f.split('.')[-1], fields or []))
 
-    trans_fields = {
-        f_name: v for f_name, v in model_opts['fields'].items()
+    trans_fields = OrderedDict([
+        [f_name, v] for f_name, v in sorted(model_opts['fields'].items(), key=lambda v: v[0])
         if not fields or f_name in fields
-    }
+    ])
 
     for o in qs.distinct():
         for f, trans_f in trans_fields.items():
