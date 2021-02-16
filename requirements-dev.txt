@@ -3,6 +3,7 @@ bumpversion
 wheel
 tox
 twine==3.2.0
+cryptography<=3.3
 
 # Tests
 pytest>=4,<5
