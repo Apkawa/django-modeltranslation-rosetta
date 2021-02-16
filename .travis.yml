@@ -5,6 +5,7 @@ python:
     - "3.6"
     - "3.7"
     - "3.8"
+    - "3.9"
 env:
   - DJANGO=1.8
   - DJANGO=1.11
@@ -17,12 +18,12 @@ matrix:
   include:
     - env: TOXENV=qa
       python: "3.7"
-    - env: TOXENV=py37-django-dev
-      python: "3.7"
+    - env: TOXENV=py39-django-dev
+      python: "3.9"
   exclude:
     # Python/Django combinations that aren't officially supported
-    - { env: DJANGO=1.11, python: "3.7" }
     - { env: DJANGO=1.11, python: "3.8" }
+    - { env: DJANGO=1.11, python: "3.9" }
   allow_failures:
     - env: DJANGO=1.8
     - env: DJANGO=1.11
