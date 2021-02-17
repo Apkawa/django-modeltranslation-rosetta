@@ -202,6 +202,7 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
         from_lang = form_data.get('from_lang') or DEFAULT_FROM_LANG
         to_lang = form_data.get('to_lang') or DEFAULT_TO_LANG
 
+
         includes = None
 
         fields = form_data.get('fields')
@@ -210,11 +211,12 @@ class EditTranslationView(AdminFormView, MultipleObjectMixin):
             includes = ['.'.join([opts['model_key'], f]) for f in fields]
 
         with translation.override(from_lang):
+            queryset = self.filter_queryset(self.get_queryset())
             translations = collect_translations(
                 from_lang=from_lang,
                 to_lang=to_lang,
                 translate_status=form_data['translate_status'],
-                queryset=self.get_queryset(),
+                queryset=queryset,
                 includes=includes,
             )
             if file_format == 'po':
