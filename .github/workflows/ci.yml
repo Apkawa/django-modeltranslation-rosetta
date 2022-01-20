@@ -46,7 +46,7 @@ jobs:
             experimental: false
           - toxenv: mypy
             python-version: 3.7
-            experimental: false
+            experimental: true
           - toxenv: pylint
             python-version: 3.7
             experimental: true
