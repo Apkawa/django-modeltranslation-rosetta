@@ -22,17 +22,17 @@ pip install -e git+https://githib.com/Apkawa/django-modeltranslation-rosetta.git
 
 ## Django and python version
 
-| Python<br/>Django |        3.5         |      3.6           |      3.7           |       3.8          |
-|:-----------------:|--------------------|--------------------|--------------------|--------------------|
-| 1.8               |       :x:          |      :x:           |       :x:          |      :x:           |
-| 1.11              | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |      :x:           |
-| 2.2               | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| 3.0               |       :x:          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-
+| Python<br/>Django | 3.7 | 3.8 | 3.9 | 3.10 |
+|:-----------------:|-----|-----|-----|------|
+|        2.2        | ✅   | ✅  | ✅   | ✅   |
+|        3.2        | ✅   | ✅  | ✅   | ✅   |
+|        4.0        | ❌   | ✅  | ✅   | ✅   |
 
 # Usage
+
 Add `modeltranslation_rosetta` into `INSTALLED_APPS` after `modeltranslation`
 settings.py
+
 ```python
 INSTALLED_APPS = [
     # ...
@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     # ...
 ]
 ```
+
 Open `/admin/modeltranslation_rosetta/trans/`
 
 ![](docs/source/images/import_export_all_models.png)
