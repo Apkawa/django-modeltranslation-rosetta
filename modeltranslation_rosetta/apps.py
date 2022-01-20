@@ -4,5 +4,5 @@ from django.apps import AppConfig
 
 
 class ApplicationConfig(AppConfig):
-    name = 'modeltranslation_rosetta'
-    verbose_name = 'Modeltranslaton rosetta'
+    name = "modeltranslation_rosetta"
+    verbose_name = "Modeltranslaton rosetta"

@@ -1,20 +1,31 @@
+# install package requirements from setup.py
 -e .
 bumpversion
 wheel
 tox
-twine==3.2.0
+twine
 cryptography<=3.3
 
 # Tests
-pytest>=4,<5
-pytest-django==3.7.0
-pytest-pythonpath==0.7.3
-pytest-cov==2.8.1
-mock==3.0.5
+pytest
+pytest-django
+pytest-pythonpath
+pytest-cov
+mock
 factory_boy
 django-extensions
+
+# QA
 flake8
 
+mypy
+django-stubs
+
+pylint
+pylint-django
+pylint-common
+
+black
 
 # Docs
 
@@ -22,3 +33,5 @@ recommonmark
 Sphinx
 alabaster
 
+# hooks
+pre-commit

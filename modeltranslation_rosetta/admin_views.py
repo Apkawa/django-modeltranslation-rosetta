@@ -37,18 +37,20 @@ class AdminDetailView(AdminObjectView, DetailView):
         context.update(DetailView.get_context_data(self, **kwargs))
         return context
 
-    def dispatch(self, request, object_id=None, form_url='', extra_context=None, **kwargs):
+    def dispatch(
+        self, request, object_id=None, form_url="", extra_context=None, **kwargs
+    ):
         self.kwargs = {
-            'pk': object_id,
-            'form_url': form_url,
-            'extra_context': extra_context
+            "pk": object_id,
+            "form_url": form_url,
+            "extra_context": extra_context,
         }
         self.kwargs.update(kwargs)
         return super(AdminDetailView, self).dispatch(request, **self.kwargs)
 
 
 class AdminUpdateView(AdminObjectView, UpdateView):
-    success_url = ''
+    success_url = ""
 
     def get_admin_context(self, **extra_context):
         context = super(AdminUpdateView, self).get_admin_context(**extra_context)
@@ -70,16 +72,17 @@ class AdminUpdateView(AdminObjectView, UpdateView):
 
     def form_valid(self, form):
         self.object = form.save()
-        if hasattr(form, 'save_m2m'):
+        if hasattr(form, "save_m2m"):
             form.save_m2m()
         return self.form_valid_response(form)
 
-    def dispatch(self, request, object_id=None, form_url='', extra_context=None, **kwargs):
+    def dispatch(
+        self, request, object_id=None, form_url="", extra_context=None, **kwargs
+    ):
         self.kwargs = {
-            'pk': object_id,
-            'form_url': form_url,
-            'extra_context': extra_context,
-
+            "pk": object_id,
+            "form_url": form_url,
+            "extra_context": extra_context,
         }
         self.kwargs.update(**kwargs)
         return super(AdminUpdateView, self).dispatch(request, **self.kwargs)
@@ -96,7 +99,10 @@ class AdminChangeFormView(AdminUpdateView):
     def get_admin_context(self, **extra_context):
         context = AdminObjectView.get_admin_context(self, **extra_context)
         context.update(
-            self.admin.get_extra_context(self.request, object_id=self.object and self.object.id))
+            self.admin.get_extra_context(
+                self.request, object_id=self.object and self.object.id
+            )
+        )
         return context
 
     def get_object(self, queryset=None):
@@ -107,17 +113,17 @@ class AdminChangeFormView(AdminUpdateView):
                 raise Http404("Not found")
 
 
-def admin_view_class(view_class, view_type='change', template_name=None):
+def admin_view_class(view_class, view_type="change", template_name=None):
     def decorator(func):
         @wraps(func)
         def wrap(self, request, *args, **kwargs):
-            view = getattr(func, '_view', None)
+            view = getattr(func, "_view", None)
             if not view:
                 view_kw = {}
                 if template_name:
-                    view_kw['template_name'] = template_name
+                    view_kw["template_name"] = template_name
                 view = view_class.as_view(admin=self, view_type=view_type, **view_kw)
-                setattr(func, '_view', None)
+                setattr(func, "_view", None)
             return view(request, *args, **kwargs)
 
         return wrap

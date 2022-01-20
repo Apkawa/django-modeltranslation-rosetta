@@ -7,5 +7,5 @@ except ImportError:
 
 
 class TestConfig(AppConfig):
-    name = 'tests'
-    label = 'modeltranslation_rosetta_tests'
+    name = "tests"
+    label = "tests"

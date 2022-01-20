@@ -24,10 +24,10 @@ def get_models():
         opts = translator.get_options_for_model(model)
         model_key = build_model_name(model)
         models_map[model_key] = {
-            'model': model,
-            'meta': model._meta,
-            'opts': opts,
-            'model_key': model_key
+            "model": model,
+            "meta": model._meta,
+            "opts": opts,
+            "model_key": model_key,
         }
 
     return models_map
@@ -44,7 +44,6 @@ def get_opts_from_model(model, fields=None):
         }
         for field_name in opts.fields.keys()
         if not fields or field_name in fields
-
     }
 
     model_key = "%s.%s" % (meta.app_label, meta.model_name)
@@ -60,7 +59,9 @@ def get_opts_from_model(model, fields=None):
 
 
 def parse_model(model):
-    return dict(zip(['app_label', 'model', 'field'], model.lower().split('.') + [None] * 2))
+    return dict(
+        zip(["app_label", "model", "field"], model.lower().split(".") + [None] * 2)
+    )
 
 
 def has_exclude(model_opts, excludes):
@@ -74,34 +75,31 @@ def has_exclude(model_opts, excludes):
     if issubclass(model_opts, Model) or isinstance(model_opts, Model):
         model_opts = get_opts_from_model(model_opts)
 
-    app_label = model_opts['app_label']
-    model_name = model_opts['model_name']
-    fields = list(model_opts['fields'])
+    app_label = model_opts["app_label"]
+    model_name = model_opts["model_name"]
+    fields = list(model_opts["fields"])
 
     if not excludes:
-        return {
-            "match": False,
-            "fields": model_opts['fields']
-        }
+        return {"match": False, "fields": model_opts["fields"]}
 
     _exclude = False
     for i in excludes:
-        _exclude |= i['app_label'] == app_label and i['model'] is None
-        _exclude |= (i['app_label'] == app_label
-                     and i['model'] == model_name
-                     and i['field'] is None
-                     )
+        _exclude |= i["app_label"] == app_label and i["model"] is None
+        _exclude |= (
+            i["app_label"] == app_label
+            and i["model"] == model_name
+            and i["field"] is None
+        )
 
         for k, f in enumerate(fields):
-            if (i['app_label'] == app_label
-                    and i['model'] == model_name
-                    and i['field'] == f):
+            if (
+                i["app_label"] == app_label
+                and i["model"] == model_name
+                and i["field"] == f
+            ):
                 del fields[k]
 
-    return {
-        "match": _exclude or not fields,
-        "fields": fields
-    }
+    return {"match": _exclude or not fields, "fields": fields}
 
 
 def has_include(model_opts, includes):
@@ -115,42 +113,40 @@ def has_include(model_opts, includes):
     if issubclass(model_opts, Model) or isinstance(model_opts, Model):
         model_opts = get_opts_from_model(model_opts)
 
-    app_label = model_opts['app_label']
-    model_name = model_opts['model_name']
-    fields = list(model_opts['fields'])
+    app_label = model_opts["app_label"]
+    model_name = model_opts["model_name"]
+    fields = list(model_opts["fields"])
 
     if not includes:
-        return {
-            "match": True,
-            "fields": model_opts['fields']
-        }
+        return {"match": True, "fields": model_opts["fields"]}
 
     _include = False
     delete_fields = set()
     for i in includes:
-        _include |= i['app_label'] == app_label and i['model'] is None
-        _include |= (i['app_label'] == app_label
-                     and i['model'] == model_name
-                     and i['field'] is None)
+        _include |= i["app_label"] == app_label and i["model"] is None
+        _include |= (
+            i["app_label"] == app_label
+            and i["model"] == model_name
+            and i["field"] is None
+        )
 
         for k, f in enumerate(fields):
             _include |= bool(
-                i['app_label'] == app_label
-                and i['model'] == model_name
-                and i['field']
-                and i['field'] == f
+                i["app_label"] == app_label
+                and i["model"] == model_name
+                and i["field"]
+                and i["field"] == f
             )
-            if (i['app_label'] == app_label
-                    and i['model'] == model_name
-                    and i['field']
-                    and i['field'] != f):
+            if (
+                i["app_label"] == app_label
+                and i["model"] == model_name
+                and i["field"]
+                and i["field"] != f
+            ):
                 delete_fields.add(f)
 
     fields = list(set(fields) - delete_fields)
-    return {
-        "match": _include and fields,
-        "fields": fields
-    }
+    return {"match": _include and fields, "fields": fields}
 
 
 def get_cleaned_fields(model_opts, excludes=None, includes=None):
@@ -162,11 +158,11 @@ def get_cleaned_fields(model_opts, excludes=None, includes=None):
     :return: list of allowed fields
     """
     exclude = has_exclude(model_opts, excludes)
-    if exclude['match']:
+    if exclude["match"]:
         return None
 
     include = has_include(model_opts, includes)
-    if not include['match']:
+    if not include["match"]:
         return None
 
-    return list(set(include['fields']) & set(exclude['fields']))
+    return list(set(include["fields"]) & set(exclude["fields"]))

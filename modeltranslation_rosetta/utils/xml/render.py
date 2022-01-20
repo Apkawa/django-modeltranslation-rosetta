@@ -1,5 +1,5 @@
 from io import StringIO, BytesIO
-from xml.sax.saxutils import escape
+from typing import Dict
 
 import inflection
 import six
@@ -7,14 +7,20 @@ from django.utils.encoding import smart_text, smart_bytes
 from django.utils.xmlutils import SimplerXMLGenerator
 from lxml import etree
 
+
 def prettyPrintXml(xmlFilePathToPrettyPrint):
     assert xmlFilePathToPrettyPrint is not None
 
 
 class XMLGenerator(SimplerXMLGenerator):
     def cdata(self, content):
-        cdata = '<![CDATA[{}]]>'.format(content)
+        cdata = "<![CDATA[{}]]>".format(content)
         self.ignorableWhitespace(cdata)
+
+    def startElement(self, name: str, attrs: Dict[str, str]) -> None:
+        # Sort attrs for a deterministic output.
+        sorted_attrs = dict(sorted(attrs.items())) if attrs else attrs
+        super().startElement(name, sorted_attrs)
 
 
 def tag_name(name):
@@ -53,33 +59,37 @@ class XMLRenderer:
     Renderer which serializes to XML.
     """
 
-    media_type = 'application/xml'
-    charset = 'utf-8'
-    item_tag_name = 'list-item'
-    root_tag_name = 'root'
+    media_type = "application/xml"
+    charset = "utf-8"
+    item_tag_name = "list-item"
+    root_tag_name = "root"
     xsd_schema = None
     indent = 4
     cdata = True
 
-    text_name = '#text'
-    attrs_name = '#attrs'
+    text_name = "#text"
+    attrs_name = "#attrs"
     # todo attrs startswith '@'
 
-    def render(self, data, root_attrs=None, parent_tag_name=None, xsd_schema=None, indent=4):
+    def render(
+        self, data, root_attrs=None, parent_tag_name=None, xsd_schema=None, indent=4
+    ):
         """
         Renders `data` into serialized XML.
         """
         if data is None:
-            return ''
+            return ""
 
         stream = StringIO()
 
         root_attrs = root_attrs or {}
         if xsd_schema:
-            root_attrs.update({
-                'xmlns:xsi': "http://www.w3.org/2001/XMLSchema-instance",
-                'xsi:schemaLocation': xsd_schema,
-            })
+            root_attrs.update(
+                {
+                    "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
+                    "xsi:schemaLocation": xsd_schema,
+                }
+            )
 
         xml = XMLGenerator(stream, self.charset)
         xml.startDocument()
@@ -100,12 +110,14 @@ class XMLRenderer:
         text = stream.getvalue()
         if indent:
 
-            parser = etree.XMLParser(resolve_entities=False, strip_cdata=False, encoding='utf-8')
+            parser = etree.XMLParser(
+                resolve_entities=False, strip_cdata=False, encoding="utf-8"
+            )
             stream = BytesIO(smart_bytes(text))
             document = etree.parse(stream, parser)
             stream = BytesIO()
             document.write(stream, pretty_print=True, encoding="utf-8")
-            text = smart_text(stream.getvalue(), encoding='utf-8')
+            text = smart_text(stream.getvalue(), encoding="utf-8")
         # if view and view.request.GET.get('_xsd_validate') and xsd_schema:
         #     xsd = etree.XMLSchema(etree.parse(io.BytesIO(requests.get(xsd_schema).content)))
         #     list(etree.iterparse(io.BytesIO(smart_bytes(text)), schema=xsd))
@@ -120,11 +132,10 @@ class XMLRenderer:
         value = dict(data)
         attrs = {}
         for k in list(value):
-            if k.startswith('@'):
+            if k.startswith("@"):
                 attrs[k[1:]] = value.pop(k)
 
         return value, attrs
-
 
     def _to_list(self, xml, data, parent_tag_name):
         parent_tag_name = parent_tag_name or self.item_tag_name
@@ -146,7 +157,9 @@ class XMLRenderer:
                     _attrs.update(_data)
                 elif _text is None:
                     _text = _data
-                _attrs = {attribute_name(k): smart_text(v) for k, v in six.iteritems(_attrs)}
+                _attrs = {
+                    attribute_name(k): smart_text(v) for k, v in six.iteritems(_attrs)
+                }
                 xml.startElement(tag_name(parent_tag_name), _attrs)
                 self._to_xml(xml, _text, parent_tag_name=parent_tag_name)
                 xml.endElement(tag_name(parent_tag_name))
@@ -157,7 +170,10 @@ class XMLRenderer:
                         value, attrs = self._split_attrs(value)
                     if is_to_attributes(value):
                         _text = value.pop(self.text_name, None)
-                        attrs = {attribute_name(k): smart_text(v) for k, v in six.iteritems(value)}
+                        attrs = {
+                            attribute_name(k): smart_text(v)
+                            for k, v in six.iteritems(value)
+                        }
                         value = _text
                     if key == self.attrs_name:
                         key = parent_tag_name
@@ -171,7 +187,7 @@ class XMLRenderer:
 
         else:
             data = smart_text(data)
-            need_cdata = self.cdata or '<' in data or '>' in data or '&' in data
+            need_cdata = self.cdata or "<" in data or ">" in data or "&" in data
 
             if need_cdata:
                 xml.cdata(data)

@@ -13,19 +13,21 @@ class FileResponse(HttpResponse):
         - file_name (string). The default downloaded file name.
     """
 
-    def __init__(self, file_content, file_name, download=True, content_type=None, *args, **kwargs):
+    def __init__(
+        self, file_content, file_name, download=True, content_type=None, *args, **kwargs
+    ):
         disposition = 'filename="{}"'.format(smart_str(file_name))
         if download:
-            disposition = 'attachment; ' + disposition
+            disposition = "attachment; " + disposition
 
         headers = {
-            'Content-Disposition': smart_bytes(disposition),
-            'Content-Length': len(file_content),
+            "Content-Disposition": smart_bytes(disposition),
+            "Content-Length": len(file_content),
         }
 
         super(FileResponse, self).__init__(
             file_content,
-            content_type=content_type or 'application/octet-stream',
+            content_type=content_type or "application/octet-stream",
             *args,
             **kwargs
         )

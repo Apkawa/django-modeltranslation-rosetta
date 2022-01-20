@@ -56,12 +56,12 @@ def elem2dict(node):
         """
         d = {node.tag: {k: v[0] if len(v) == 1 else v for k, v in dd.items()}}
     if node.attrib:
-        d[node.tag].update(('@' + k, v) for k, v in node.attrib.items())
+        d[node.tag].update(("@" + k, v) for k, v in node.attrib.items())
     if node.text:
         text = node.text.strip()
         if children or node.attrib:
             if text:
-                d[node.tag]['#text'] = text
+                d[node.tag]["#text"] = text
         else:
             d[node.tag] = text
     return d
@@ -90,7 +90,7 @@ def parse_datetime(dt_string, tz=timezone.utc):
     """
     dt = None
     try:
-        dt = datetime.datetime.strptime(dt_string, '%Y-%m-%dT%H-%M-%S')
+        dt = datetime.datetime.strptime(dt_string, "%Y-%m-%dT%H-%M-%S")
     except ValueError:
         dt = _parse_dt(dt_string)
     if timezone.is_naive(dt):
@@ -112,7 +112,7 @@ def fix_dirty_decimal(value: str) -> str:
     """
     data = sanitize_separators(value)
     # Todo replace all i18n separators
-    data = data.replace(',', '.').replace(' ', '')
+    data = data.replace(",", ".").replace(" ", "")
     # dirty hack
     # if '.' not in data:
     #     # No dots
@@ -130,16 +130,14 @@ def fix_dirty_decimal(value: str) -> str:
     # data = ''.join(a) + '.' + b
     return data
 
+
 class XMLParser:
     def serialize(self, el, *args):
         dict_elem = elem2dict(el)
         return dict_elem
 
-
     def parse(self, xml_file, tags=None):
-        context = etree.iterparse(xml_file,
-                                  events=('end',), tag=tags,
-                                  )
+        context = etree.iterparse(xml_file, events=("end",), tag=tags)
         parsed = fast_iter(context, self.serialize)
         el = parsed.__next__()
         return itertools.chain([el], parsed)

@@ -17,7 +17,7 @@ class DisconnectSignal(object):
                 if not self._handlers:
                     continue
                 _ref_f = receiver[-1]
-                if type(_ref_f).__name__ == 'weakref':
+                if type(_ref_f).__name__ == "weakref":
                     _ref_f = _ref_f()
                 if _ref_f not in self._handlers:
                     new_receivers.append(receiver)
