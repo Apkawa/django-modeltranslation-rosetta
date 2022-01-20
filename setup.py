@@ -44,7 +44,7 @@ setup(
         "Django>=1.11",
         "tablib",
         "openpyxl>=2.6.0",
-        "Babel==2.3.4",
+        "Babel==2.9.1",
         "inflection",
         "lxml",
         "defusedxml",
