@@ -38,13 +38,13 @@ setup(
     author="Apkawa",
     author_email="apkawa@gmail.com",
     packages=[package for package in find_packages() if package.startswith(app_name)],
-    python_requires=">=3.6, <4",
+    python_requires=">=3.7, <4",
     install_requires=[
         "six",
         "Django>=1.11",
         "tablib",
         "openpyxl>=2.6.0",
-        "Babel==2.3.4",
+        "Babel>=2.9.1",
         "inflection",
         "lxml",
         "defusedxml",
@@ -57,7 +57,6 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Framework :: Django",
-        "Framework :: Django :: 1.11",
         "Framework :: Django :: 2.2",
         "Framework :: Django :: 3.2",
         "Framework :: Django :: 4.0",

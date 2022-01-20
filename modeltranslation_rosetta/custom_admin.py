@@ -6,12 +6,12 @@ from inspect import isclass
 import six
 from django import forms
 from django.conf import settings
-from django.conf.urls import url
 from django.db import models
 from django.templatetags.static import static
 from django.views.generic.base import View
 
 from .admin_views import AdminTemplateView
+from .compat import url
 
 
 # TODO replace to django-admin-view

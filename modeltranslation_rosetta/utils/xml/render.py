@@ -3,7 +3,7 @@ from typing import Dict
 
 import inflection
 import six
-from django.utils.encoding import smart_text, smart_bytes
+from django.utils.encoding import smart_str, smart_bytes
 from django.utils.xmlutils import SimplerXMLGenerator
 from lxml import etree
 
@@ -117,14 +117,14 @@ class XMLRenderer:
             document = etree.parse(stream, parser)
             stream = BytesIO()
             document.write(stream, pretty_print=True, encoding="utf-8")
-            text = smart_text(stream.getvalue(), encoding="utf-8")
+            text = smart_str(stream.getvalue(), encoding="utf-8")
         # if view and view.request.GET.get('_xsd_validate') and xsd_schema:
         #     xsd = etree.XMLSchema(etree.parse(io.BytesIO(requests.get(xsd_schema).content)))
         #     list(etree.iterparse(io.BytesIO(smart_bytes(text)), schema=xsd))
         return text
 
     def _to_dict_attributes(self, xml, data, parent_tag_name):
-        _data = {attribute_name(k): smart_text(v) for k, v in six.iteritems(data)}
+        _data = {attribute_name(k): smart_str(v) for k, v in six.iteritems(data)}
         xml.startElement(list_item_name(parent_tag_name), _data)
         xml.endElement(list_item_name(parent_tag_name))
 
@@ -158,7 +158,7 @@ class XMLRenderer:
                 elif _text is None:
                     _text = _data
                 _attrs = {
-                    attribute_name(k): smart_text(v) for k, v in six.iteritems(_attrs)
+                    attribute_name(k): smart_str(v) for k, v in six.iteritems(_attrs)
                 }
                 xml.startElement(tag_name(parent_tag_name), _attrs)
                 self._to_xml(xml, _text, parent_tag_name=parent_tag_name)
@@ -171,7 +171,7 @@ class XMLRenderer:
                     if is_to_attributes(value):
                         _text = value.pop(self.text_name, None)
                         attrs = {
-                            attribute_name(k): smart_text(v)
+                            attribute_name(k): smart_str(v)
                             for k, v in six.iteritems(value)
                         }
                         value = _text
@@ -186,7 +186,7 @@ class XMLRenderer:
                         xml.endElement(tag_name(key))
 
         else:
-            data = smart_text(data)
+            data = smart_str(data)
             need_cdata = self.cdata or "<" in data or ">" in data or "&" in data
 
             if need_cdata:

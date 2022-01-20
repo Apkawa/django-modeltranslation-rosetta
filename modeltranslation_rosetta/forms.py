@@ -6,7 +6,7 @@ from itertools import chain
 from django import forms
 from django.forms.formsets import TOTAL_FORM_COUNT
 from django.forms.models import fields_for_model
-from django.utils.translation import ungettext
+from django.utils.translation import ngettext
 
 from modeltranslation_rosetta.settings import (
     DEFAULT_FROM_LANG,
@@ -198,7 +198,7 @@ class FieldFormSet(forms.BaseModelFormSet):
                 > self.absolute_max
             ):
                 raise forms.ValidationError(
-                    ungettext(
+                    ngettext(
                         "Please submit %d or fewer forms.",
                         "Please submit %d or fewer forms.",
                         self.max_num,
@@ -211,7 +211,7 @@ class FieldFormSet(forms.BaseModelFormSet):
                 and self.total_form_count() - len(self.deleted_forms) < self.min_num
             ):
                 raise forms.ValidationError(
-                    ungettext(
+                    ngettext(
                         "Please submit %d or more forms.",
                         "Please submit %d or more forms.",
                         self.min_num,
