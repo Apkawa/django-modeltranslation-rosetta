@@ -4,7 +4,6 @@ bumpversion
 wheel
 tox
 twine
-cryptography<=3.3
 
 # Tests
 pytest
