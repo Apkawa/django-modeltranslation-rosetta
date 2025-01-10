@@ -42,7 +42,7 @@ def get_opts_from_model(model, fields=None):
             lang: build_localized_fieldname(field_name, lang)
             for lang, _ in settings.LANGUAGES
         }
-        for field_name in opts.fields.keys()
+        for field_name in opts.fields
         if not fields or field_name in fields
     }
 

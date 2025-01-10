@@ -69,10 +69,10 @@ def elem2dict(node):
 
 class TIMEZONE:
     MSK = pytz.timezone("Europe/Moscow")
-    UTC = timezone.utc
+    UTC = pytz.UTC
 
 
-def parse_datetime(dt_string, tz=timezone.utc):
+def parse_datetime(dt_string, tz=TIMEZONE.UTC):
     """
     >>> parse_datetime("2018-12-12T07-55-29")
     datetime.datetime(2018, 12, 12, 7, 55, 29, tzinfo=<UTC>)

@@ -2,14 +2,14 @@
 from __future__ import unicode_literals
 
 from django.conf import settings
-from django.conf.urls import url, include
+from django.conf.urls import url
 from django.contrib import admin
 from django.conf.urls.static import static
 
 urlpatterns = []
 
 urlpatterns += [
-    url(r'^admin/', admin.site.urls),
+    url(r"^admin/", admin.site.urls),
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
@@ -22,5 +22,5 @@ js_info_dict = {
     # 'packages': ('your.app.package',),
 }
 urlpatterns += [
-    url(r'^jsi18n/$', javascript_catalog, js_info_dict, name='javascript-catalog'),
+    url(r"^jsi18n/$", javascript_catalog, js_info_dict, name="javascript-catalog"),
 ]
