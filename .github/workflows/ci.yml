@@ -38,22 +38,22 @@ jobs:
           - python-version: 3.13
             toxenv: django-dev
             experimental: true
-          - toxenv: django32
+          - toxenv: django42
             python-version: "3.14.0-alpha - 3.14"
             experimental: true
           - python-version: "pypy-3.10"
-            toxenv: django32
+            toxenv: django42
             experimental: true
 
 
           - toxenv: flake8
-            python-version: 3.7
+            python-version: 3.11
             experimental: false
           - toxenv: mypy
-            python-version: 3.7
+            python-version: 3.11
             experimental: true
           - toxenv: pylint
-            python-version: 3.7
+            python-version: 3.11
             experimental: true
 
 
