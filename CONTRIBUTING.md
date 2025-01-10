@@ -9,9 +9,9 @@ tox # run test matrix
 ## Run tests with pyenv with specific python and pypy
 
 ```shell
-pyenv install 3.10-dev pypy3.7-7.3.5
-pyenv local 3.10-dev pypy3.7-7.3.5
-pip install -r requirements.txt
+pyenv install 3.8 3.13 pypy3.10
+pyenv local 3.8 3.13 pypy3.10
+pip install -r requirements-dev.txt
 tox -e py310,pypy3
 ```
 
